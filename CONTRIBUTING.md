@@ -15,8 +15,8 @@ Thank you for your interest in improving **hevc-cli**! We welcome contributions,
 ### 2. Clone and Install in Editable Mode
 
 ```bash
-git clone https://github.com/yourusername/hevc-cli.git
-cd hevc-cli
+git clone https://github.com/Boblebol/slim-video.git
+cd slim-video
 pip install -e ".[dev]"
 ```
 

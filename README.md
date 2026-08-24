@@ -9,8 +9,8 @@
 </p>
 
 <p>
-  <a href="https://github.com/Boblebol/hevc-cli/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Boblebol/hevc-cli/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI Status"></a>
-  <a href="https://github.com/Boblebol/hevc-cli/releases"><img src="https://img.shields.io/badge/version-1.1.0-blue.svg?style=flat-square&logo=git&logoColor=white" alt="Version 1.1.0"></a>
+  <a href="https://github.com/Boblebol/slim-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Boblebol/slim-video/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI Status"></a>
+  <a href="https://github.com/Boblebol/slim-video/releases"><img src="https://img.shields.io/badge/version-1.1.0-blue.svg?style=flat-square&logo=git&logoColor=white" alt="Version 1.1.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12%20|%203.13-3776AB.svg?style=flat-square&logo=python&logoColor=white" alt="Python Versions"></a>
   <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/badge/package%20manager-uv-DE5FE9.svg?style=flat-square&logo=uv&logoColor=white" alt="uv"></a>
   <a href="https://docs.pydantic.dev/"><img src="https://img.shields.io/badge/data%20models-Pydantic%20v2-E92063.svg?style=flat-square&logo=pydantic&logoColor=white" alt="Pydantic v2"></a>
@@ -76,19 +76,19 @@ brew install ffmpeg
 
 ```bash
 # Installation globale en CLI isolée :
-uv tool install git+https://github.com/Boblebol/hevc-cli.git
+uv tool install git+https://github.com/Boblebol/slim-video.git
 
 # Ou dans un environnement de développement local :
-git clone https://github.com/Boblebol/hevc-cli.git
-cd hevc-cli
+git clone https://github.com/Boblebol/slim-video.git
+cd slim-video
 uv pip install -e ".[dev]"
 ```
 
 ### Avec `pip`
 
 ```bash
-git clone https://github.com/Boblebol/hevc-cli.git
-cd hevc-cli
+git clone https://github.com/Boblebol/slim-video.git
+cd slim-video
 pip install -e ".[dev]"
 ```
 

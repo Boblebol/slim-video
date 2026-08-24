@@ -43,8 +43,8 @@ hevc-cli = "hevc_cli.cli:main"
 
 [project.urls]
 Homepage = "https://alexandre-enouf.fr"
-Repository = "https://github.com/Boblebol/hevc-cli"
-Issues = "https://github.com/Boblebol/hevc-cli/issues"
+Repository = "https://github.com/Boblebol/slim-video"
+Issues = "https://github.com/Boblebol/slim-video/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
