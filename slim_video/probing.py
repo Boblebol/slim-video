@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 #: Video container extensions scanned recursively.
 SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
@@ -160,6 +160,7 @@ def find_video_files(root: Path) -> list[Path]:
 def find_h264_candidates(
     root: Path,
     all_codecs: bool = False,
+    progress_callback: Optional[Callable[[Path, int, int], None]] = None,
 ) -> tuple[list[Path], list[Path]]:
     """Scan directory and partition files into candidates and already-HEVC files."""
     all_videos = find_video_files(root)
@@ -172,5 +173,8 @@ def find_h264_candidates(
             already_hevc.append(f)
         elif all_codecs or is_h264_codec(codec) or codec is None:
             candidates.append(f)
+
+        if progress_callback:
+            progress_callback(f, len(candidates), len(already_hevc))
 
     return candidates, already_hevc

@@ -375,9 +375,21 @@ def _run_main_workflow(
         )
     )
 
-    # 1. Scan files
-    console.print(f"\n[bold cyan]🔍  Scanning[/bold cyan] [yellow]{root}[/yellow]…")
-    candidates, already_hevc = find_h264_candidates(root, all_codecs=all_codecs)
+    # 1. Scan files with animated spinner & real-time file discovery
+    with console.status(
+        f"[bold cyan]🔍 Scanning files in[/bold cyan] [yellow]{root.name}/[/yellow]…",
+        spinner="dots",
+    ) as scan_status:
+
+        def _scan_progress(cur_file: Path, cand_count: int, hevc_count: int) -> None:
+            scan_status.update(
+                f"[bold cyan]🔍 Scanning directory…[/bold cyan] [yellow]{cur_file.name[:35]}[/yellow] "
+                f"[dim]({cand_count} candidates, {hevc_count} HEVC found)[/dim]"
+            )
+
+        candidates, already_hevc = find_h264_candidates(
+            root, all_codecs=all_codecs, progress_callback=_scan_progress
+        )
 
     if already_hevc:
         console.print(
@@ -405,7 +417,7 @@ def _run_main_workflow(
             )
         return
 
-    # 2. Probe metadata & run 20s middle sample evaluation
+    # 2. Probe metadata & run 20s middle sample evaluation with live animation
     console.print(
         f"[bold blue]🧪  Evaluating {len(candidates)} candidate file(s) "
         f"({sample_seconds}s sample test at mid-point)…[/bold blue]"
@@ -430,14 +442,19 @@ def _run_main_workflow(
             except ValueError:
                 rel = Path(f.name)
 
-            progress.update(task, description=f"Analyzing [cyan]{f.name[:28]}[/cyan]…")
-
             codec = get_video_codec(f) or "h264"
             res = get_resolution(f)
             fps = get_fps(f)
             dur = get_duration(f)
             audio = get_audio_summary(f)
             size = f.stat().st_size if f.exists() else 0
+
+            progress.update(
+                task,
+                description=(
+                    f"Analyzing [bold cyan]{f.name[:28]}[/bold cyan] [dim]({codec} · {res})[/dim]…"
+                ),
+            )
 
             est_size: Optional[int] = None
             est_gain: Optional[float] = None
@@ -448,7 +465,11 @@ def _run_main_workflow(
 
                 def _sample_cb(pct: float, _elapsed: float, speed: str, _f: Path = f) -> None:
                     progress.update(
-                        task, description=f"Sample 20s [cyan]{_f.name[:28]}[/cyan] ({pct:.0f}%)"
+                        task,
+                        description=(
+                            f"Sample [bold cyan]{_f.name[:26]}[/bold cyan] "
+                            f"[green]{pct:3.0f}%[/green] @ [yellow]{speed}[/yellow]"
+                        ),
                     )
 
                 est_res = estimate_savings(
