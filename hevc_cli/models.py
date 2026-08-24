@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,8 +22,8 @@ class FileItem(BaseModel):
     duration: float = 0.0
     audio: str = ""
     selected: bool = True
-    estimated_size: int | None = None
-    estimated_gain_pct: float | None = None
+    estimated_size: Optional[int] = None
+    estimated_gain_pct: Optional[float] = None
     below_threshold: bool = False
 
     def __init__(
@@ -37,8 +37,8 @@ class FileItem(BaseModel):
         duration: float = 0.0,
         audio: str = "",
         selected: bool = True,
-        estimated_size: int | None = None,
-        estimated_gain_pct: float | None = None,
+        estimated_size: Optional[int] = None,
+        estimated_gain_pct: Optional[float] = None,
         below_threshold: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -68,15 +68,15 @@ class TreeNode:
         is_dir: bool,
         path: Path,
         rel_path: Path,
-        file_item: FileItem | None = None,
-        parent: TreeNode | None = None,
+        file_item: Optional[FileItem] = None,
+        parent: Optional[TreeNode] = None,
     ) -> None:
         self.name: str = name
         self.is_dir: bool = is_dir
         self.path: Path = path
         self.rel_path: Path = rel_path
-        self.file_item: FileItem | None = file_item
-        self.parent: TreeNode | None = parent
+        self.file_item: Optional[FileItem] = file_item
+        self.parent: Optional[TreeNode] = parent
         self.children: list[TreeNode] = []
         self.expanded: bool = True
 
@@ -188,10 +188,10 @@ class TranscodeRecord(BaseModel):
     saved_bytes: int
     elapsed_seconds: float
     speed: str
-    output_path: str | None = None
-    quarantine_path: str | None = None
+    output_path: Optional[str] = None
+    quarantine_path: Optional[str] = None
     status: str = "ok"  # "ok", "error", "skipped"
-    error_message: str | None = None
+    error_message: Optional[str] = None
 
 
 class BatchSummary(BaseModel):
