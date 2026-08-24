@@ -1,4 +1,4 @@
-"""Pydantic v2 models and data transfer objects (DTOs) for hevc-cli."""
+"""Pydantic v2 models and data transfer objects (DTOs) for slim-video."""
 
 from __future__ import annotations
 

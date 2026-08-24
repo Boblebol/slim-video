@@ -59,9 +59,11 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# hevc-cli User & Project Runtime files
+# slim-video User & Project Runtime files
 _originals_to_delete/
 transcode_report*.txt
+.slim_video_config.json
+.slim_video_history.json
 .hevc_cli_config.json
 .hevc_cli_history.json
 *.hevc.mkv

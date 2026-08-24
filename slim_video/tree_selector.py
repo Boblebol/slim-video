@@ -158,7 +158,7 @@ def _interactive_tree_loop(
             cursor_idx = max(0, len(visible_rows) - 1)
 
         # Header
-        header_text = " 🎬  hevc-cli — H.264 Video Selection for x265 Transcoding "
+        header_text = " 🎬  slim-video — H.264 Video Selection for x265 Transcoding "
         _safe_addstr(stdscr, 0, 0, header_text.ljust(max_x), curses.color_pair(4) | curses.A_BOLD)
 
         total_files = tree.total_files

@@ -1,4 +1,4 @@
-"""Unit tests for hevc_cli.report module."""
+"""Unit tests for slim_video.report module."""
 
 from __future__ import annotations
 
