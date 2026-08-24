@@ -34,8 +34,10 @@
 - [🚀 Installation](#-installation)
 - [🩺 Diagnostic Système (`slim-video doctor`)](#-diagnostic-système-slim-video-doctor)
 - [🎬 Utilisation Rapide](#-utilisation-rapide)
+- [📊 Mode Estimation Seule (`slim-video estimate`)](#-mode-estimation-seule-slim-video-estimate)
 - [🌳 Contrôles de l'Arbre Interactif](#-contrôles-de-larbre-interactif)
-- [⚙️ Configuration (`slim-video config`)](#️-configuration-slim-video-config)
+- [⚙️ Configuration & Wizard (`slim-video config`)](#️-configuration--wizard-slim-video-config)
+- [📈 Historique & Économies à Vie (`slim-video history`)](#-historique--économies-à-vie-slim-video-history)
 - [📄 Rapport Texte Automatique](#-rapport-texte-automatique)
 - [🔒 Sécurité & Quarantaine](#-sécurité--quarantaine)
 - [📦 Changelog & Versioning](#-changelog--versioning)
@@ -45,15 +47,17 @@
 
 ## ✨ Fonctionnalités Clés
 
+- 🧭 **Interface CLI Ergonomique & Interactive** : Lancez simplement `slim-video` sans argument pour naviguer avec un menu interactif complet (dossier courant, sélection personnalisée, `~/Movies`, volumes externes, configuration, diagnostic).
 - 🧪 **Test Échantillon Réel de 20s au Milieu** : Évalue le taux de compression exact sur un extrait de 20 secondes au centre de la vidéo pour extrapoler le gain réel sur l'ensemble du fichier.
 - 🎯 **Seuil d'Éligibilité Automatique (< 10%)** : Si l'extrapolation montre un gain inférieur à 10%, le fichier est automatiquement décoché avec la mention `[< 10% ⏭ Ignoré]`. Vous ne perdez pas de temps à ré-encoder des fichiers qui ne réduisent pas significativement.
-- 🌳 **Navigation en Arbre Interactive (TUI)** : Pliez/dépliez les dossiers (`←`/`→`), cochez/décochez les fichiers (`Espace`), sélection globale (`a`), navigation rapide au clavier.
-- ⚡ **Compression Automatique Optimale x265** : Re-compression matérielle en HEVC 10-bit (`p010le` + `spatial_aq`) préservant la qualité de l'original tout en réduisant la taille de 40% à 65%.
+- 📊 **Mode Estimation Seule (`estimate`)** : Prévisualisez le gain potentiel sur toute une bibliothèque sous forme de tableau Rich coloré sans modifier aucun fichier.
+- 🌳 **Navigation en Arbre Interactive (TUI)** : Pliez/dépliez les dossiers (`←`/`→`), cochez/décochez les fichiers (`Espace`), sélection globale (`a`), navigation fluide au clavier.
+- ⚡ **Compression Matérielle Optimale x265** : Re-compression matérielle en HEVC 10-bit (`p010le` + `spatial_aq`) via Apple VideoToolbox préservant la qualité tout en réduisant la taille de 40% à 65%.
 - 🎵 **Copie Lossless Audio & Sous-titres** : Toutes les pistes audio (Dolby Atmos, 5.1/7.1, AAC, DTS, etc.) et tous les sous-titres sont copiés à l'identique sans perte (`-c:a copy -c:s copy -map 0`).
-- 📄 **Rapport Texte Détaillé (`transcode_report.txt`)** : Généré automatiquement à la fin de l'encodage avec le bilan complet (avant, après, gain en Go et en %, durée, vitesse d'encodage).
+- 🧙 **Assistant de Configuration Interactif (`wizard`)** : Ajustez tous vos paramètres pas-à-pas avec des questions interactives et des valeurs par défaut.
+- 📈 **Suivi Cumulé des Économies (`history`)** : Visualisez l'espace disque total libéré au fil du temps sur votre Mac.
+- 📄 **Rapport Texte Détaillé (`transcode_report.txt`)** : Généré automatiquement à la fin de chaque session.
 - 🏥 **Diagnostic Système & Matériel (`slim-video doctor`)** : Valide en temps réel les dépendances, le support matériel Apple Silicon et lance un benchmark vidéo live (> 200 fps).
-- 📐 **Architecture Robuste & Typage Strict** : Modèles de données et DTOs propulsés par **Pydantic v2**, typage statique strict vérifié par **Mypy**, formatage **Ruff**.
-- ⚙️ **Fichier de Réglages Explicite (`~/.slim_video_config.json`)** : Personnalisable facilement via la commande `slim-video config`.
 - 🔒 **Sécurité Maximale** : Vos fichiers originaux ne sont jamais supprimés immédiatement mais déplacés en quarantaine dans `_originals_to_delete/`.
 
 ---
@@ -81,7 +85,7 @@ uv tool install git+https://github.com/Boblebol/slim-video.git
 # Ou dans un environnement de développement local :
 git clone https://github.com/Boblebol/slim-video.git
 cd slim-video
-uv pip install -e ".[dev]"
+uv sync --all-extras --dev
 ```
 
 ### Avec `pip`
@@ -126,11 +130,38 @@ slim-video doctor
 ## 🎬 Utilisation Rapide
 
 ```bash
-# Lancer dans le dossier courant :
+# 1. Menu interactif d'accueil (choix du dossier, disques externes, etc.) :
 slim-video
 
-# Ou spécifier un dossier cible :
+# 2. Spécifier directement un dossier cible :
 slim-video /Volumes/UGREEN/Films
+
+# 3. Spécifier un seuil de gain personnalisé (ex: 15%) et qualité (ex: 45) :
+slim-video /Volumes/UGREEN/Films --min-gain 15 --quality 45
+
+# 4. Mode non-interactif / batch (automatisation) :
+slim-video /Volumes/UGREEN/Films --yes
+```
+
+---
+
+## 📊 Mode Estimation Seule (`slim-video estimate`)
+
+Pour savoir combien de Go vous allez économiser sans toucher aux fichiers :
+
+```bash
+slim-video estimate /Volumes/UGREEN/Films
+```
+
+```text
+              📊 Potential Space Savings Estimation (Films)
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Video File                 ┃ Format    ┃  Original ┃ Est. HEVC ┃ Est. Gain ┃ Recommendation  ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ Action/Matrix.mp4          │ h264 1080p│   4.00 GB │   1.83 GB │    -54.2% │ ✅ Transcode    │
+│ Action/Die_Hard.mkv        │ h264 1080p│   4.20 GB │   1.89 GB │    -55.1% │ ✅ Transcode    │
+│ Autres/Film_Compresse.mp4  │ h264 1080p│   3.00 GB │   2.84 GB │     -5.2% │ ⏭ Skip (< 10%) │
+└────────────────────────────┴───────────┴───────────┴───────────┴───────────┴─────────────────┘
 ```
 
 ---
@@ -164,25 +195,41 @@ slim-video /Volumes/UGREEN/Films
 
 ---
 
-## ⚙️ Configuration (`slim-video config`)
+## ⚙️ Configuration & Wizard (`slim-video config`)
 
-Un fichier de configuration Pydantic explicite est sauvegardé dans `~/.slim_video_config.json` :
+Un fichier de configuration explicite est sauvegardé dans `~/.slim_video_config.json` :
 
 ```bash
-# Afficher les paramètres actuels
+# Lancer l'assistant interactif de configuration :
+slim-video config wizard
+
+# Afficher les paramètres actuels sous forme de tableau :
 slim-video config show
 
-# Modifier le seuil de gain minimum (ex: 15%)
+# Modifier une option précise :
 slim-video config set min_gain_percent 15
-
-# Modifier la durée de l'échantillon de test (ex: 20 secondes)
 slim-video config set sample_duration_seconds 20
-
-# Modifier la qualité VideoToolbox (1=meilleure qualité, 100=plus compressé)
 slim-video config set quality 50
 
-# Réinitialiser tous les réglages par défaut
+# Réinitialiser tous les réglages par défaut :
 slim-video config reset
+```
+
+---
+
+## 📈 Historique & Économies à Vie (`slim-video history`)
+
+Suivez l'espace disque cumulé économisé sur votre machine :
+
+```bash
+# Afficher le bilan global des économies :
+slim-video history stats
+
+# Voir les 10 dernières conversions :
+slim-video history
+
+# Effacer l'historique :
+slim-video history clear
 ```
 
 ---
