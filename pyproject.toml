@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hevc-cli"
+version = "1.1.0"
+description = "Fast, intelligent, hardware-accelerated HEVC/x265 batch transcoder for Apple Silicon."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Alexandre Enouf", email = "alexandre.enouf@gmail.com" }]
+keywords = ["hevc", "h265", "h264", "ffmpeg", "transcoder", "videotoolbox", "apple-silicon", "cli", "tui", "pydantic"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video :: Conversion",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.8",
+    "InquirerPy>=0.3.4",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+hevc-cli = "hevc_cli.cli:main"
+
+[project.urls]
+Homepage = "https://alexandre-enouf.fr"
+Repository = "https://github.com/Boblebol/hevc-cli"
+Issues = "https://github.com/Boblebol/hevc-cli/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hevc_cli*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["B008", "E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "InquirerPy.*"
+ignore_missing_imports = true
+implicit_reexport = true
