@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-DEFAULT_HISTORY_FILE: Path = Path.home() / ".hevc_cli_history.json"
+DEFAULT_HISTORY_FILE: Path = Path.home() / ".slim_video_history.json"
 
 _EMPTY_STORE: dict[str, list[dict[str, Any]]] = {"tests": [], "transcodes": []}
 
@@ -15,7 +15,7 @@ _EMPTY_STORE: dict[str, list[dict[str, Any]]] = {"tests": [], "transcodes": []}
 class HistoryManager:
     """JSON-backed store that records estimation tests and transcode jobs.
 
-    The history file lives at ``~/.hevc_cli_history.json`` by default and
+    The history file lives at ``~/.slim_video_history.json`` by default and
     persists across CLI sessions. All writes are atomic via a full file
     re-write (the store is small enough that this is fine).
 

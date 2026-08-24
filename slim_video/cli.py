@@ -1,4 +1,4 @@
-"""hevc-cli — Simplified H.264 to HEVC/x265 batch transcoder for Apple Silicon.
+"""slim-video — Simplified H.264 to HEVC/x265 batch transcoder for Apple Silicon.
 
 Features:
 - Scans directory recursively for H.264/AVC videos
@@ -8,8 +8,8 @@ Features:
 - Automatic hardware-accelerated x265 compression preserving source quality
 - Lossless copy of all audio tracks and subtitles
 - Detailed summary text report of disk space gained
-- Persistent and explicit configuration file manageable via `hevc-cli config`
-- Built-in environment & hardware diagnostics via `hevc-cli doctor`
+- Persistent and explicit configuration file manageable via `slim-video config`
+- Built-in environment & hardware diagnostics via `slim-video doctor`
 - Safe quarantine of original files (never permanently deletes without user consent)
 """
 
@@ -36,9 +36,9 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from hevc_cli import __version__
-from hevc_cli.config import config_manager
-from hevc_cli.core import (
+from slim_video import __version__
+from slim_video.config import config_manager
+from slim_video.core import (
     DEFAULT_QUALITY,
     SAMPLE_SECONDS,
     check_dependencies,
@@ -51,11 +51,11 @@ from hevc_cli.core import (
     get_video_codec,
     transcode,
 )
-from hevc_cli.doctor import run_all_doctor_checks
-from hevc_cli.history import HistoryManager
-from hevc_cli.models import BatchSummary, FileItem, TranscodeRecord
-from hevc_cli.report import save_report_file
-from hevc_cli.tree_selector import fmt_bytes, fmt_duration, select_files_interactive
+from slim_video.doctor import run_all_doctor_checks
+from slim_video.history import HistoryManager
+from slim_video.models import BatchSummary, FileItem, TranscodeRecord
+from slim_video.report import save_report_file
+from slim_video.tree_selector import fmt_bytes, fmt_duration, select_files_interactive
 
 # ---------------------------------------------------------------------------
 # App Bootstrap
@@ -63,7 +63,7 @@ from hevc_cli.tree_selector import fmt_bytes, fmt_duration, select_files_interac
 
 console = Console()
 app = typer.Typer(
-    name="hevc-cli",
+    name="slim-video",
     help="🎬  Simplified H.264 to x265/HEVC batch transcoder for Apple Silicon.",
     add_completion=False,
     rich_markup_mode="rich",
@@ -148,7 +148,7 @@ def _run_main_workflow(
     """Execute the core workflow: scan -> sample evaluation -> interactive tree -> transcode -> report."""
     console.print(
         Panel.fit(
-            f"[bold cyan]hevc-cli[/bold cyan] [dim]v{__version__}[/dim] ── "
+            f"[bold cyan]slim-video[/bold cyan] [dim]v{__version__}[/dim] ── "
             "[bold white]H.264 → x265 (HEVC) Auto Transcoder[/bold white]\n"
             f"[dim]Sample Test: {sample_seconds}s (milieu) · Seuil gain min: {min_gain}% · Apple Silicon VideoToolbox[/dim]",
             border_style="cyan",
@@ -555,7 +555,7 @@ def cmd_doctor(
     """Run full system diagnostic and hardware verification."""
     console.print(
         Panel.fit(
-            "[bold cyan]hevc-cli Doctor[/bold cyan] ── [bold white]System & Hardware Diagnostics[/bold white]\n"
+            "[bold cyan]slim-video Doctor[/bold cyan] ── [bold white]System & Hardware Diagnostics[/bold white]\n"
             "[dim]Verifies ffmpeg, ffprobe, VideoToolbox hardware acceleration, and environment health[/dim]",
             border_style="cyan",
         )
@@ -588,7 +588,7 @@ def cmd_doctor(
             Panel(
                 "[bold green]🚀 All checks passed![/bold green]\n\n"
                 "Your system is correctly configured and ready to run hardware-accelerated HEVC transcoding.\n"
-                "You can now run: [bold cyan]hevc-cli /path/to/videos[/bold cyan]",
+                "You can now run: [bold cyan]slim-video /path/to/videos[/bold cyan]",
                 title="✨ Ready to Transcode",
                 border_style="green",
             )
@@ -598,8 +598,8 @@ def cmd_doctor(
             Panel(
                 "[bold red]❌ Environment issues detected.[/bold red]\n\n"
                 "Please fix the failing items above before transcoding.\n"
-                "Most issues can be solved by running: [bold]brew install ffmpeg[/bold]",
-                title="⚠️ Attention Required",
+                "Run with [bold]brew install ffmpeg[/bold] if tools are missing.",
+                title="⚠️ Diagnostics Incomplete",
                 border_style="red",
             )
         )
@@ -612,7 +612,7 @@ def cmd_doctor(
 
 config_app = typer.Typer(
     name="config",
-    help="⚙️  Manage explicit configuration settings (~/.hevc_cli_config.json).",
+    help="⚙️  Manage application configuration settings.",
     no_args_is_help=False,
 )
 app.add_typer(config_app, name="config")
@@ -629,7 +629,7 @@ def cmd_config_default(ctx: typer.Context) -> None:
 def cmd_config_show() -> None:
     """Display current configuration in a table."""
     cfg = config_manager.load()
-    table = Table(title="⚙️  hevc-cli Configuration Settings", expand=True)
+    table = Table(title="⚙️  slim-video Configuration Settings", expand=True)
     table.add_column("Setting Key", style="cyan", no_wrap=True)
     table.add_column("Value", style="bold green")
     table.add_column("Description", style="dim")
@@ -653,7 +653,7 @@ def cmd_config_show() -> None:
 
 
 @config_app.command(
-    "set", help="Update a configuration setting (e.g. `hevc-cli config set min_gain_percent 15`)."
+    "set", help="Update a configuration setting (e.g. `slim-video config set min_gain_percent 15`)."
 )
 def cmd_config_set(
     key: str = typer.Argument(..., help="Setting key name to change."),

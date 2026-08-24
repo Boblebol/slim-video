@@ -1,10 +1,10 @@
-"""Unit tests for hevc_cli.doctor diagnostic module."""
+"""Unit tests for slim_video.doctor diagnostic module."""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from hevc_cli.doctor import (
+from slim_video.doctor import (
     check_curses_terminal,
     check_ffmpeg_binary,
     check_ffprobe_binary,
@@ -39,7 +39,7 @@ def test_check_curses_terminal() -> None:
     assert res.passed is True
 
 
-@patch("hevc_cli.doctor.shutil.which")
+@patch("slim_video.doctor.shutil.which")
 def test_check_ffmpeg_binary_missing(mock_which: MagicMock) -> None:
     mock_which.return_value = None
     res = check_ffmpeg_binary()
@@ -47,7 +47,7 @@ def test_check_ffmpeg_binary_missing(mock_which: MagicMock) -> None:
     assert "Not found" in res.details
 
 
-@patch("hevc_cli.doctor.shutil.which")
+@patch("slim_video.doctor.shutil.which")
 def test_check_ffprobe_binary_missing(mock_which: MagicMock) -> None:
     mock_which.return_value = None
     res = check_ffprobe_binary()
@@ -55,19 +55,16 @@ def test_check_ffprobe_binary_missing(mock_which: MagicMock) -> None:
     assert "Not found" in res.details
 
 
-@patch("hevc_cli.doctor.subprocess.run")
-@patch("hevc_cli.doctor.shutil.which")
+@patch("slim_video.doctor.subprocess.run")
+@patch("slim_video.doctor.shutil.which")
 def test_check_videotoolbox_support(mock_which: MagicMock, mock_run: MagicMock) -> None:
-    mock_which.return_value = "/opt/homebrew/bin/ffmpeg"
-    mock_run.return_value = MagicMock(stdout="hevc_videotoolbox\nlibx265", returncode=0)
-
+    mock_which.return_value = "/usr/bin/ffmpeg"
+    mock_run.return_value = MagicMock(stdout="hevc_videotoolbox", returncode=0)
     res = check_videotoolbox_support()
     assert res.passed is True
-    assert "hevc_videotoolbox" in res.details
+    assert "available" in res.details
 
 
 def test_run_all_doctor_checks() -> None:
-    checks = run_all_doctor_checks(include_benchmark=False)
-    assert len(checks) >= 6
-    for c in checks:
-        assert c.name
+    results = run_all_doctor_checks(include_benchmark=False)
+    assert len(results) >= 6

@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from hevc_cli.models import BatchSummary
-from hevc_cli.tree_selector import fmt_bytes, fmt_duration
+from slim_video.models import BatchSummary
+from slim_video.tree_selector import fmt_bytes, fmt_duration
 
 
 def format_report(summary: BatchSummary) -> str:

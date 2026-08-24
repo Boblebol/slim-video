@@ -1,4 +1,4 @@
-"""Unit tests for hevc_cli.cli entrypoints."""
+"""Unit tests for slim_video.cli entrypoints."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from hevc_cli.cli import app
+from slim_video.cli import app
 
 runner = CliRunner()
 
@@ -18,7 +18,7 @@ def test_cli_help() -> None:
     assert "H.264" in result.output or "transcoder" in result.output
 
 
-@patch("hevc_cli.cli.check_dependencies")
+@patch("slim_video.cli.check_dependencies")
 def test_cli_missing_dependencies(mock_deps: MagicMock) -> None:
     mock_deps.return_value = ["ffmpeg"]
     result = runner.invoke(app, ["transcode"])
@@ -26,8 +26,8 @@ def test_cli_missing_dependencies(mock_deps: MagicMock) -> None:
     assert "Missing required dependencies" in result.output
 
 
-@patch("hevc_cli.cli.check_dependencies")
-@patch("hevc_cli.cli.find_h264_candidates")
+@patch("slim_video.cli.check_dependencies")
+@patch("slim_video.cli.find_h264_candidates")
 def test_cli_empty_directory(
     mock_candidates: MagicMock, mock_deps: MagicMock, tmp_path: Path
 ) -> None:
@@ -39,8 +39,8 @@ def test_cli_empty_directory(
     assert "No H.264 video files found" in result.output
 
 
-@patch("hevc_cli.cli.check_dependencies")
-@patch("hevc_cli.cli.find_h264_candidates")
+@patch("slim_video.cli.check_dependencies")
+@patch("slim_video.cli.find_h264_candidates")
 def test_cli_all_already_hevc(
     mock_candidates: MagicMock, mock_deps: MagicMock, tmp_path: Path
 ) -> None:
@@ -59,7 +59,7 @@ def test_cli_config_commands() -> None:
 
     result_path = runner.invoke(app, ["config", "path"])
     assert result_path.exit_code == 0
-    assert ".hevc_cli_config.json" in result_path.output
+    assert ".slim_video_config.json" in result_path.output
 
     result_set = runner.invoke(app, ["config", "set", "min_gain_percent", "12.5"])
     assert result_set.exit_code == 0

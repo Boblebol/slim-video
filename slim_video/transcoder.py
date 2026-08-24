@@ -6,8 +6,8 @@ import shutil
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from hevc_cli.estimator import DEFAULT_QUALITY, _run_with_progress
-from hevc_cli.probing import QUARANTINE_DIR, get_duration
+from slim_video.estimator import DEFAULT_QUALITY, _run_with_progress
+from slim_video.probing import QUARANTINE_DIR, get_duration
 
 
 def transcode(

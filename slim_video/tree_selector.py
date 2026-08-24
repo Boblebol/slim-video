@@ -11,7 +11,7 @@ import locale
 import sys
 from pathlib import Path
 
-from hevc_cli.models import FileItem, TreeNode
+from slim_video.models import FileItem, TreeNode
 
 
 def fmt_bytes(size: float) -> str:

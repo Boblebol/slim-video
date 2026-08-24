@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from hevc_cli.probing import _run, get_audio_bitrate, get_duration
+from slim_video.probing import _run, get_audio_bitrate, get_duration
 
 SAMPLE_SECONDS: int = 20
 DEFAULT_QUALITY: int = 50

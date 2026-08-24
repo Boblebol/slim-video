@@ -1,10 +1,10 @@
-"""Unit tests for hevc_cli.config module."""
+"""Unit tests for slim_video.config module."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from hevc_cli.config import ConfigManager
+from slim_video.config import ConfigManager
 
 
 def test_config_defaults(tmp_path: Path) -> None:

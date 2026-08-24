@@ -1,11 +1,11 @@
-"""Live validation test to guarantee hevc-cli is properly installed and runnable on this PC."""
+"""Live validation test to guarantee slim-video is properly installed and runnable on this PC."""
 
 from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from hevc_cli.cli import app
-from hevc_cli.doctor import run_all_doctor_checks
+from slim_video.cli import app
+from slim_video.doctor import run_all_doctor_checks
 
 runner = CliRunner()
 
@@ -21,7 +21,7 @@ def test_system_doctor_checks_pass_on_this_machine() -> None:
 
 
 def test_doctor_cli_command_live_execution() -> None:
-    """Validate that `hevc-cli doctor` runs with exit code 0."""
+    """Validate that `slim-video doctor` runs with exit code 0."""
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0, f"Doctor CLI failed:\n{result.output}"
     assert "All checks passed" in result.output or "Ready to Transcode" in result.output

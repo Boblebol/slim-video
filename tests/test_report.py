@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from hevc_cli.models import BatchSummary, TranscodeRecord
-from hevc_cli.report import format_report, save_report_file
+from slim_video.models import BatchSummary, TranscodeRecord
+from slim_video.report import format_report, save_report_file
 
 
 def test_format_report_and_save(tmp_path: Path) -> None:

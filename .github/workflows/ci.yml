@@ -47,11 +47,11 @@ jobs:
       - name: Install dependencies with uv
         run: uv sync --all-extras --dev
       - name: Run Ruff Lint
-        run: uv run ruff check hevc_cli/ tests/
+        run: uv run ruff check slim_video/ tests/
       - name: Run Ruff Format Check
-        run: uv run ruff format --check hevc_cli/ tests/
+        run: uv run ruff format --check slim_video/ tests/
       - name: Run Mypy Static Type Analysis
-        run: uv run mypy hevc_cli/
+        run: uv run mypy slim_video/
 
   tests:
     name: Tests (Python ${{ matrix.python-version }})
@@ -74,6 +74,6 @@ jobs:
       - name: Install package with dev dependencies
         run: uv sync --all-extras --dev
       - name: Run Doctor Hardware Diagnostics
-        run: uv run hevc-cli doctor
+        run: uv run slim-video doctor
       - name: Run Pytest Suite
         run: uv run pytest tests/ -v --tb=short

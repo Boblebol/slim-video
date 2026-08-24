@@ -1,7 +1,7 @@
-"""Configuration manager using Pydantic v2 for hevc-cli.
+"""Configuration manager using Pydantic v2 for slim-video.
 
-Manages persistent user settings stored in ~/.hevc_cli_config.json.
-Settings can be queried and modified via the CLI (`hevc-cli config`).
+Manages persistent user settings stored in ~/.slim_video_config.json.
+Settings can be queried and modified via the CLI (`slim-video config`).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-DEFAULT_CONFIG_PATH: Path = Path.home() / ".hevc_cli_config.json"
+DEFAULT_CONFIG_PATH: Path = Path.home() / ".slim_video_config.json"
 
 
 class AppConfig(BaseModel):

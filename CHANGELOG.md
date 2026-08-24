@@ -7,15 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-24
+
+### Changed
+- Renamed project, CLI executable, and Python package to `slim-video` (`slim_video`).
+- Updated persistent configuration file location to `~/.slim_video_config.json`.
+- Updated persistent history file location to `~/.slim_video_history.json`.
+- Standardized Conventional Commits documentation and CONTRIBUTING guidelines.
+
+### Fixed
+- Fixed runtime typing evaluation error on Python 3.9 using `Optional` and `eval-type-backport`.
+
 ## [1.1.0] - 2026-08-24
 
 ### Added
-- 20-second sample estimation engine (`hevc_cli.estimator`) taking mid-point extracts to extrapolate full video compression ratio before batch processing.
+- 20-second sample estimation engine (`slim_video.estimator`) taking mid-point extracts to extrapolate full video compression ratio before batch processing.
 - Automatic de-selection threshold (< 10% gain) for files where transcoding produces negligible space savings.
-- Interactive terminal user interface (`hevc_cli.tree_selector`) with collapsible directory trees, checkbox selection, and real-time gain estimation badges.
-- Environment & hardware diagnostics command `hevc-cli doctor` (`hevc_cli.doctor`) verifying dependencies, Apple Silicon VideoToolbox acceleration, and running a live transcode benchmark.
-- Pydantic v2 data models and DTOs (`hevc_cli.models`, `hevc_cli.config`) with strict schema validation.
-- Explicit configuration file management via `hevc-cli config` (`~/.hevc_cli_config.json`).
+- Interactive terminal user interface (`slim_video.tree_selector`) with collapsible directory trees, checkbox selection, and real-time gain estimation badges.
+- Environment & hardware diagnostics command `slim-video doctor` (`slim_video.doctor`) verifying dependencies, Apple Silicon VideoToolbox acceleration, and running a live transcode benchmark.
+- Pydantic v2 data models and DTOs (`slim_video.models`, `slim_video.config`) with strict schema validation.
+- Explicit configuration file management via `slim-video config` (`~/.slim_video_config.json`).
 - Formatted summary text report generator (`transcode_report.txt`) saved in target folders.
 - Native `uv` package manager support for fast installation and task execution.
 - Strict static type checking with `mypy --strict`.
@@ -40,8 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release of hardware-accelerated H.264 to HEVC/x265 batch transcoder for Apple Silicon.
 - VideoToolbox 10-bit color encoding (`p010le`) with spatial adaptive quantization (`spatial_aq`).
 - Basic terminal file selector.
-- Cumulative history tracking in `~/.hevc_cli_history.json`.
+- Cumulative history tracking in `~/.slim_video_history.json`.
 
-[Unreleased]: https://github.com/Boblebol/slim-video/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Boblebol/slim-video/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Boblebol/slim-video/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Boblebol/slim-video/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Boblebol/slim-video/releases/tag/v1.0.0

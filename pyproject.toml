@@ -1,20 +1,24 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hevc-cli"
-version = "1.1.0"
-description = "Fast, intelligent, hardware-accelerated HEVC/x265 batch transcoder for Apple Silicon."
+name = "slim-video"
+version = "1.2.0"
+description = "Smart, hardware-accelerated H.264 to HEVC/x265 batch transcoder for Apple Silicon with sample estimation & collapsible TUI."
 readme = "README.md"
 license = "MIT"
-authors = [{ name = "Alexandre Enouf", email = "alexandre.enouf@gmail.com" }]
-keywords = ["hevc", "h265", "h264", "ffmpeg", "transcoder", "videotoolbox", "apple-silicon", "cli", "tui", "pydantic"]
+authors = [
+    { name = "Alexandre Enouf", email = "alexandre.enouf@gmail.com" }
+]
+keywords = ["slim-video", "hevc", "h265", "h264", "ffmpeg", "transcoder", "videotoolbox", "apple-silicon", "cli", "tui", "pydantic"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
+    "Environment :: Console :: Curses",
     "Intended Audience :: End Users/Desktop",
-    "Operating System :: MacOS",
+    "Intended Audience :: System Administrators",
+    "Operating System :: MacOS :: MacOS X",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -40,7 +44,8 @@ dev = [
 ]
 
 [project.scripts]
-hevc-cli = "hevc_cli.cli:main"
+slim-video = "slim_video.cli:main"
+hevc-cli = "slim_video.cli:main"
 
 [project.urls]
 Homepage = "https://alexandre-enouf.fr"
@@ -49,7 +54,7 @@ Issues = "https://github.com/Boblebol/slim-video/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["hevc_cli*"]
+include = ["slim_video*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

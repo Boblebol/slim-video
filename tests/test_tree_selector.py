@@ -1,10 +1,10 @@
-"""Unit tests for hevc_cli.tree_selector module."""
+"""Unit tests for slim_video.tree_selector module."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from hevc_cli.tree_selector import (
+from slim_video.tree_selector import (
     FileItem,
     build_file_tree,
     fmt_bytes,

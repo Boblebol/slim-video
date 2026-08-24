@@ -1,4 +1,4 @@
-"""System diagnostics and hardware validation module for hevc-cli.
+"""System diagnostics and hardware validation module for slim-video.
 
 Verifies that the system environment, binaries (ffmpeg, ffprobe), Apple Silicon
 hardware acceleration (VideoToolbox), and fast temp storage are correctly configured
@@ -16,7 +16,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from hevc_cli.models import DoctorCheckResult
+from slim_video.models import DoctorCheckResult
 
 
 def check_python_version() -> DoctorCheckResult:

@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1>
-  🎬 hevc-cli
+  🎬 slim-video
 </h1>
 
 <p>
@@ -10,7 +10,7 @@
 
 <p>
   <a href="https://github.com/Boblebol/slim-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Boblebol/slim-video/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI Status"></a>
-  <a href="https://github.com/Boblebol/slim-video/releases"><img src="https://img.shields.io/badge/version-1.1.0-blue.svg?style=flat-square&logo=git&logoColor=white" alt="Version 1.1.0"></a>
+  <a href="https://github.com/Boblebol/slim-video/releases"><img src="https://img.shields.io/badge/version-1.2.0-blue.svg?style=flat-square&logo=git&logoColor=white" alt="Version 1.2.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12%20|%203.13-3776AB.svg?style=flat-square&logo=python&logoColor=white" alt="Python Versions"></a>
   <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/badge/package%20manager-uv-DE5FE9.svg?style=flat-square&logo=uv&logoColor=white" alt="uv"></a>
   <a href="https://docs.pydantic.dev/"><img src="https://img.shields.io/badge/data%20models-Pydantic%20v2-E92063.svg?style=flat-square&logo=pydantic&logoColor=white" alt="Pydantic v2"></a>
@@ -32,10 +32,10 @@
 - [✨ Fonctionnalités Clés](#-fonctionnalités-clés)
 - [🖥 Prérequis](#-prérequis)
 - [🚀 Installation](#-installation)
-- [🩺 Diagnostic Système (`hevc-cli doctor`)](#-diagnostic-système-hevc-cli-doctor)
+- [🩺 Diagnostic Système (`slim-video doctor`)](#-diagnostic-système-slim-video-doctor)
 - [🎬 Utilisation Rapide](#-utilisation-rapide)
 - [🌳 Contrôles de l'Arbre Interactif](#-contrôles-de-larbre-interactif)
-- [⚙️ Configuration (`hevc-cli config`)](#️-configuration-hevc-cli-config)
+- [⚙️ Configuration (`slim-video config`)](#️-configuration-slim-video-config)
 - [📄 Rapport Texte Automatique](#-rapport-texte-automatique)
 - [🔒 Sécurité & Quarantaine](#-sécurité--quarantaine)
 - [📦 Changelog & Versioning](#-changelog--versioning)
@@ -51,9 +51,9 @@
 - ⚡ **Compression Automatique Optimale x265** : Re-compression matérielle en HEVC 10-bit (`p010le` + `spatial_aq`) préservant la qualité de l'original tout en réduisant la taille de 40% à 65%.
 - 🎵 **Copie Lossless Audio & Sous-titres** : Toutes les pistes audio (Dolby Atmos, 5.1/7.1, AAC, DTS, etc.) et tous les sous-titres sont copiés à l'identique sans perte (`-c:a copy -c:s copy -map 0`).
 - 📄 **Rapport Texte Détaillé (`transcode_report.txt`)** : Généré automatiquement à la fin de l'encodage avec le bilan complet (avant, après, gain en Go et en %, durée, vitesse d'encodage).
-- 🏥 **Diagnostic Système & Matériel (`hevc-cli doctor`)** : Valide en temps réel les dépendances, le support matériel Apple Silicon et lance un benchmark vidéo live (> 200 fps).
+- 🏥 **Diagnostic Système & Matériel (`slim-video doctor`)** : Valide en temps réel les dépendances, le support matériel Apple Silicon et lance un benchmark vidéo live (> 200 fps).
 - 📐 **Architecture Robuste & Typage Strict** : Modèles de données et DTOs propulsés par **Pydantic v2**, typage statique strict vérifié par **Mypy**, formatage **Ruff**.
-- ⚙️ **Fichier de Réglages Explicite (`~/.hevc_cli_config.json`)** : Personnalisable facilement via la commande `hevc-cli config`.
+- ⚙️ **Fichier de Réglages Explicite (`~/.slim_video_config.json`)** : Personnalisable facilement via la commande `slim-video config`.
 - 🔒 **Sécurité Maximale** : Vos fichiers originaux ne sont jamais supprimés immédiatement mais déplacés en quarantaine dans `_originals_to_delete/`.
 
 ---
@@ -94,17 +94,17 @@ pip install -e ".[dev]"
 
 ---
 
-## 🩺 Diagnostic Système (`hevc-cli doctor`)
+## 🩺 Diagnostic Système (`slim-video doctor`)
 
 Avant de commencer, vérifiez que votre machine et l'accélération matérielle Apple Silicon sont prêtes :
 
 ```bash
-hevc-cli doctor
+slim-video doctor
 ```
 
 ```text
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ hevc-cli Doctor ── System & Hardware Diagnostics                             │
+│ slim-video Doctor ── System & Hardware Diagnostics                           │
 ╰──────────────────────────────────────────────────────────────────────────────╯
                              🏥 Diagnostic Results                              
 ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -127,10 +127,10 @@ hevc-cli doctor
 
 ```bash
 # Lancer dans le dossier courant :
-hevc-cli
+slim-video
 
 # Ou spécifier un dossier cible :
-hevc-cli /Volumes/UGREEN/Films
+slim-video /Volumes/UGREEN/Films
 ```
 
 ---
@@ -138,7 +138,7 @@ hevc-cli /Volumes/UGREEN/Films
 ## 🌳 Contrôles de l'Arbre Interactif
 
 ```text
-┌─ 🎬 hevc-cli ── H.264 Video Selection for x265 Transcoding ──────────────────┐
+┌─ 🎬 slim-video ── H.264 Video Selection for x265 Transcoding ────────────────┐
 │ 📁 Directory: /Volumes/UGREEN/Films  (4 candidate files, 14.5 GB)            │
 │──────────────────────────────────────────────────────────────────────────────│
 │ [x] ▼ 📁 Action/  (2 files, 8.2 GB)                                          │
@@ -164,25 +164,25 @@ hevc-cli /Volumes/UGREEN/Films
 
 ---
 
-## ⚙️ Configuration (`hevc-cli config`)
+## ⚙️ Configuration (`slim-video config`)
 
-Un fichier de configuration Pydantic explicite est sauvegardé dans `~/.hevc_cli_config.json` :
+Un fichier de configuration Pydantic explicite est sauvegardé dans `~/.slim_video_config.json` :
 
 ```bash
 # Afficher les paramètres actuels
-hevc-cli config show
+slim-video config show
 
 # Modifier le seuil de gain minimum (ex: 15%)
-hevc-cli config set min_gain_percent 15
+slim-video config set min_gain_percent 15
 
 # Modifier la durée de l'échantillon de test (ex: 20 secondes)
-hevc-cli config set sample_duration_seconds 20
+slim-video config set sample_duration_seconds 20
 
 # Modifier la qualité VideoToolbox (1=meilleure qualité, 100=plus compressé)
-hevc-cli config set quality 50
+slim-video config set quality 50
 
 # Réinitialiser tous les réglages par défaut
-hevc-cli config reset
+slim-video config reset
 ```
 
 ---
@@ -201,7 +201,7 @@ Video Encoder:      Apple VideoToolbox (hevc_videotoolbox - 10-bit)
 Total Batch Time:   08m 12s
 
 ================================================================================
-                              GLOBAL STORAGE GAIN
+                               GLOBAL STORAGE GAIN
 ================================================================================
 Files Selected:     2 / 4 candidate(s)
 Transcoded OK:      2 file(s)

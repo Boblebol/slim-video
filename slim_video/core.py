@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import shutil
 
-from hevc_cli.estimator import DEFAULT_QUALITY, SAMPLE_SECONDS, estimate_savings
-from hevc_cli.probing import (
+from slim_video.estimator import DEFAULT_QUALITY, SAMPLE_SECONDS, estimate_savings
+from slim_video.probing import (
     H264_CODECS,
     HEVC_CODECS,
     QUARANTINE_DIR,
@@ -22,7 +22,7 @@ from hevc_cli.probing import (
     is_h264_codec,
     is_hevc_codec,
 )
-from hevc_cli.transcoder import transcode
+from slim_video.transcoder import transcode
 
 
 def check_dependencies() -> list[str]:
