@@ -101,6 +101,15 @@ def get_visible_rows(node: TreeNode, depth: int = 0) -> list[tuple[TreeNode, int
     return rows
 
 
+def fit_terminal_text(text: str, max_width: int) -> str:
+    """Format text to fit within max_width using middle ellipsis if needed."""
+    if len(text) <= max_width or max_width < 4:
+        return text[:max_width]
+    part = (max_width - 1) // 2
+    rem = max_width - 1 - part
+    return f"{text[:part]}…{text[-rem:]}" if rem > 0 else f"{text[: max_width - 1]}…"
+
+
 def _safe_addstr(stdscr: curses.window, y: int, x: int, text: str, attr: int = 0) -> None:
     """Safely write string to curses window without overflowing boundaries."""
     max_y, max_x = stdscr.getmaxyx()
@@ -157,8 +166,8 @@ def _interactive_tree_loop(
         if cursor_idx >= len(visible_rows):
             cursor_idx = max(0, len(visible_rows) - 1)
 
-        # Header
-        header_text = " 🎬  slim-video — H.264 Video Selection for x265 Transcoding "
+        # Header - full width
+        header_text = " 🎬  slim-video — Video Selection for HEVC / x265 Transcoding "
         _safe_addstr(stdscr, 0, 0, header_text.ljust(max_x), curses.color_pair(4) | curses.A_BOLD)
 
         total_files = tree.total_files
@@ -204,35 +213,40 @@ def _interactive_tree_loop(
                     chk = "[ ] "
                     chk_color = curses.color_pair(1) | curses.A_DIM
 
-                # Expander
                 expander = "▼ " if node.expanded else "▶ "
-                folder_str = f"{indent}{chk}{expander}📁 {node.name}/"
-                meta_str = f"  ({node.total_files} file{'s' if node.total_files > 1 else ''}, {fmt_bytes(node.total_size)})"
+                meta_str = f"({node.total_files} file{'s' if node.total_files > 1 else ''} · {fmt_bytes(node.total_size)})"
+                left_prefix = f"{indent}{chk}{expander}📁 "
 
-                line_content = f"{folder_str}{meta_str}"
+                # Responsive width calculation
+                avail_name = max(5, max_x - len(left_prefix) - len(meta_str) - 3)
+                dir_display = node.name + "/"
+                if len(dir_display) > avail_name:
+                    dir_display = fit_terminal_text(dir_display, avail_name)
+
+                meta_x = max(len(left_prefix) + len(dir_display) + 2, max_x - len(meta_str) - 2)
 
                 if is_cursor:
+                    full_line = f"{left_prefix}{dir_display}".ljust(meta_x) + meta_str
                     _safe_addstr(
                         stdscr,
                         y,
                         0,
-                        line_content.ljust(max_x - 1),
+                        full_line.ljust(max_x - 1),
                         curses.A_REVERSE | curses.A_BOLD,
                     )
                 else:
-                    _safe_addstr(stdscr, y, 0, f"{indent}", curses.color_pair(1))
-                    x_pos = len(indent)
-                    _safe_addstr(stdscr, y, x_pos, chk, chk_color)
-                    x_pos += len(chk)
+                    _safe_addstr(stdscr, y, 0, indent, curses.color_pair(1))
+                    pos = len(indent)
+                    _safe_addstr(stdscr, y, pos, chk, chk_color)
+                    pos += len(chk)
                     _safe_addstr(
                         stdscr,
                         y,
-                        x_pos,
-                        f"{expander}📁 {node.name}/",
+                        pos,
+                        f"{expander}📁 {dir_display}",
                         curses.color_pair(2) | curses.A_BOLD,
                     )
-                    x_pos += len(f"{expander}📁 {node.name}/")
-                    _safe_addstr(stdscr, y, x_pos, meta_str, curses.color_pair(1) | curses.A_DIM)
+                    _safe_addstr(stdscr, y, meta_x, meta_str, curses.color_pair(1) | curses.A_DIM)
 
             else:
                 item = node.file_item
@@ -243,10 +257,15 @@ def _interactive_tree_loop(
                     chk = "[ ] "
                     chk_color = curses.color_pair(1) | curses.A_DIM
 
-                res_str = f" [{item.codec.upper() if item else 'H264'}, {item.resolution if item else ''}]"
-                size_str = f" {fmt_bytes(item.size if item else 0)}"
+                # Construct right-side metadata badge
+                codec_name = item.codec.upper() if item else "H264"
+                res_str = item.resolution if item else ""
+                audio_str = (
+                    f" · {item.audio}" if (item and item.audio and item.audio != "No audio") else ""
+                )
+                spec_str = f"[{codec_name} {res_str}{audio_str}]" if res_str else f"[{codec_name}]"
+                orig_size_str = fmt_bytes(item.size if item else 0)
 
-                # Sample test estimation tag
                 est_tag = ""
                 est_color = curses.color_pair(1)
                 if item and item.estimated_gain_pct is not None:
@@ -257,26 +276,56 @@ def _interactive_tree_loop(
                         est_tag = f" → ~{fmt_bytes(item.estimated_size or 0)} (-{item.estimated_gain_pct:.1f}% ✅)"
                         est_color = curses.color_pair(3)
 
-                file_str = f"{indent}{chk}🎬 {node.name}"
+                # Right metadata
+                right_full = f"{spec_str}  {orig_size_str}{est_tag}"
+                left_prefix = f"{indent}{chk}🎬 "
+
+                # Responsive adjustments for smaller screens
+                avail_name = max_x - len(left_prefix) - len(right_full) - 3
+                if avail_name < 15 and audio_str:
+                    spec_str = f"[{codec_name} {res_str}]"
+                    right_full = f"{spec_str}  {orig_size_str}{est_tag}"
+                    avail_name = max_x - len(left_prefix) - len(right_full) - 3
+                if avail_name < 10:
+                    right_full = f"{orig_size_str}{est_tag}"
+                    avail_name = max_x - len(left_prefix) - len(right_full) - 3
+
+                avail_name = max(6, avail_name)
+                file_display = node.name
+                if len(file_display) > avail_name:
+                    file_display = fit_terminal_text(file_display, avail_name)
+
+                right_x = max(
+                    len(left_prefix) + len(file_display) + 2,
+                    max_x - len(right_full) - 2,
+                )
 
                 if is_cursor:
-                    full_line = f"{file_str}{res_str}{size_str}{est_tag}"
+                    full_line = f"{left_prefix}{file_display}".ljust(right_x) + right_full
                     _safe_addstr(
-                        stdscr, y, 0, full_line.ljust(max_x - 1), curses.A_REVERSE | curses.A_BOLD
+                        stdscr,
+                        y,
+                        0,
+                        full_line.ljust(max_x - 1),
+                        curses.A_REVERSE | curses.A_BOLD,
                     )
                 else:
-                    _safe_addstr(stdscr, y, 0, f"{indent}", curses.color_pair(1))
-                    x_pos = len(indent)
-                    _safe_addstr(stdscr, y, x_pos, chk, chk_color)
-                    x_pos += len(chk)
-                    _safe_addstr(stdscr, y, x_pos, f"🎬 {node.name}", curses.color_pair(1))
-                    x_pos += len(f"🎬 {node.name}")
-                    _safe_addstr(stdscr, y, x_pos, res_str, curses.color_pair(2))
-                    x_pos += len(res_str)
-                    _safe_addstr(stdscr, y, x_pos, size_str, curses.color_pair(1) | curses.A_BOLD)
-                    x_pos += len(size_str)
+                    _safe_addstr(stdscr, y, 0, indent, curses.color_pair(1))
+                    pos = len(indent)
+                    _safe_addstr(stdscr, y, pos, chk, chk_color)
+                    pos += len(chk)
+                    _safe_addstr(stdscr, y, pos, f"🎬 {file_display}", curses.color_pair(1))
+
+                    # Render right-hand side specs and gain
+                    curr_x = right_x
+                    _safe_addstr(stdscr, y, curr_x, spec_str, curses.color_pair(2))
+                    curr_x += len(spec_str) + 2
+                    _safe_addstr(
+                        stdscr, y, curr_x, orig_size_str, curses.color_pair(1) | curses.A_BOLD
+                    )
+                    curr_x += len(orig_size_str)
                     if est_tag:
-                        _safe_addstr(stdscr, y, x_pos, est_tag, est_color)
+                        _safe_addstr(stdscr, y, curr_x, est_tag, est_color)
 
         # Footer / Help bar
         sel_count = tree.selected_files

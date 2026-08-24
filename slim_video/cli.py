@@ -55,13 +55,26 @@ from slim_video.doctor import check_videotoolbox_support, run_all_doctor_checks
 from slim_video.history import HistoryManager
 from slim_video.models import BatchSummary, FileItem, TranscodeRecord
 from slim_video.report import save_report_file
-from slim_video.tree_selector import fmt_bytes, fmt_duration, select_files_interactive
+from slim_video.tree_selector import (
+    fit_terminal_text,
+    fmt_bytes,
+    fmt_duration,
+    select_files_interactive,
+)
 
 # ---------------------------------------------------------------------------
 # App Bootstrap & Styling
 # ---------------------------------------------------------------------------
 
 console = Console()
+
+
+def format_file_label(name: str, extra_width_needed: int = 40) -> str:
+    """Format file name to dynamically fit terminal width without arbitrary cut-off."""
+    term_width = console.width if console.width else 80
+    max_len = max(30, term_width - extra_width_needed)
+    return fit_terminal_text(name, max_len)
+
 
 CLI_HELP_EPILOG = """
 [bold yellow]💡 Examples & Quick Commands:[/bold yellow]
@@ -382,8 +395,9 @@ def _run_main_workflow(
     ) as scan_status:
 
         def _scan_progress(cur_file: Path, cand_count: int, hevc_count: int) -> None:
+            disp_name = format_file_label(cur_file.name, extra_width_needed=45)
             scan_status.update(
-                f"[bold cyan]🔍 Scanning directory…[/bold cyan] [yellow]{cur_file.name[:35]}[/yellow] "
+                f"[bold cyan]🔍 Scanning directory…[/bold cyan] [yellow]{disp_name}[/yellow] "
                 f"[dim]({cand_count} candidates, {hevc_count} HEVC found)[/dim]"
             )
 
@@ -449,10 +463,11 @@ def _run_main_workflow(
             audio = get_audio_summary(f)
             size = f.stat().st_size if f.exists() else 0
 
+            disp_f = format_file_label(f.name, extra_width_needed=35)
             progress.update(
                 task,
                 description=(
-                    f"Analyzing [bold cyan]{f.name[:28]}[/bold cyan] [dim]({codec} · {res})[/dim]…"
+                    f"Analyzing [bold cyan]{disp_f}[/bold cyan] [dim]({codec} · {res})[/dim]…"
                 ),
             )
 
@@ -464,10 +479,11 @@ def _run_main_workflow(
             if run_samples and size > 0:
 
                 def _sample_cb(pct: float, _elapsed: float, speed: str, _f: Path = f) -> None:
+                    disp_sub = format_file_label(_f.name, extra_width_needed=35)
                     progress.update(
                         task,
                         description=(
-                            f"Sample [bold cyan]{_f.name[:26]}[/bold cyan] "
+                            f"Sample [bold cyan]{disp_sub}[/bold cyan] "
                             f"[green]{pct:3.0f}%[/green] @ [yellow]{speed}[/yellow]"
                         ),
                     )
@@ -596,7 +612,7 @@ def _display_estimation_table(root: Path, items: list[FileItem], min_gain: float
         expand=True,
         border_style="cyan",
     )
-    table.add_column("Video File", style="cyan", no_wrap=True)
+    table.add_column("Video File", style="cyan", no_wrap=False, overflow="fold")
     table.add_column("Format", style="dim", justify="center")
     table.add_column("Original", justify="right")
     table.add_column("Est. HEVC", justify="right")
@@ -706,21 +722,23 @@ def _execute_batch(
                 _ls: list[str] = last_speed,
             ) -> None:
                 _ls[0] = speed
+                disp_curr = format_file_label(_f.name, extra_width_needed=45)
                 progress.update(
                     file_task,
                     completed=pct,
                     description=(
-                        f"[bold cyan]{_f.name[:30]}[/bold cyan] "
+                        f"[bold cyan]{disp_curr}[/bold cyan] "
                         f"[green]{pct:.1f}%[/green] "
                         f"{fmt_duration(elapsed)}/{fmt_duration(_dur)} "
                         f"@ [yellow]{speed}[/yellow]"
                     ),
                 )
 
+            disp_start = format_file_label(f.name, extra_width_needed=40)
             progress.update(
                 file_task,
                 completed=0,
-                description=f"[bold cyan]{f.name[:30]}[/bold cyan] — starting…",
+                description=f"[bold cyan]{disp_start}[/bold cyan] — starting…",
             )
 
             result = transcode(
@@ -837,8 +855,8 @@ def _display_batch_summary(summary: BatchSummary, report_path: Path) -> None:
         )
     )
 
-    t = Table(title="📋  Transcode Breakdown", expand=True)
-    t.add_column("File", style="cyan", no_wrap=True)
+    t = Table(title="📋  Transcode Breakdown", expand=True, border_style="cyan")
+    t.add_column("File", style="cyan", no_wrap=False, overflow="fold")
     t.add_column("Original", justify="right")
     t.add_column("HEVC", justify="right")
     t.add_column("Saved", justify="right", style="green")
@@ -1132,6 +1150,8 @@ def cmd_history_stats() -> None:
                 col,
                 style=style,
                 justify="right" if col in ("Original", "HEVC", "Gain") else "left",
+                no_wrap=False if col == "File" else True,
+                overflow="fold" if col == "File" else "ellipsis",
             )
         for entry in reversed(transcodes[-10:]):
             status_str = "[green]OK[/green]" if entry.get("status") == "ok" else "[red]Error[/red]"

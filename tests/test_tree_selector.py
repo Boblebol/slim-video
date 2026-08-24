@@ -26,6 +26,14 @@ def test_fmt_duration() -> None:
     assert fmt_duration(3665) == "1h 01m 05s"
 
 
+def test_fit_terminal_text() -> None:
+    from slim_video.tree_selector import fit_terminal_text
+
+    assert fit_terminal_text("short.mp4", 20) == "short.mp4"
+    assert fit_terminal_text("very_long_movie_name_2024.1080p.mkv", 15) == "very_lo…80p.mkv"
+    assert len(fit_terminal_text("very_long_movie_name_2024.1080p.mkv", 15)) == 15
+
+
 def test_tree_construction_and_hierarchy() -> None:
     root = Path("/media/videos")
     f1 = FileItem(root / "film1.mp4", Path("film1.mp4"), 1_000_000, "h264", "1080p")
