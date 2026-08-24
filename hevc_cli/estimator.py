@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from hevc_cli.probing import _run, get_audio_bitrate, get_duration
 
@@ -16,7 +16,7 @@ DEFAULT_QUALITY: int = 50
 def _run_with_progress(
     cmd: list[str],
     duration: float = 0.0,
-    callback: Callable[[float, float, str], None] | None = None,
+    callback: Optional[Callable[[float, float, str], None]] = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run ffmpeg and emit real-time progress via callback."""
     if not callback or duration <= 0:
@@ -58,7 +58,7 @@ def estimate_savings(
     path: Path,
     quality: int = DEFAULT_QUALITY,
     sample_seconds: int = SAMPLE_SECONDS,
-    callback: Callable[[float, float, str], None] | None = None,
+    callback: Optional[Callable[[float, float, str], None]] = None,
 ) -> dict[str, Any]:
     """Estimate HEVC space savings for *path* by encoding a real sample.
 

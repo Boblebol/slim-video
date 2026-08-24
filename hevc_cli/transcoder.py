@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from hevc_cli.estimator import DEFAULT_QUALITY, _run_with_progress
 from hevc_cli.probing import QUARANTINE_DIR, get_duration
@@ -14,7 +14,7 @@ def transcode(
     src: Path,
     library_root: Path,
     quality: int = DEFAULT_QUALITY,
-    progress_callback: Callable[[float, float, str], None] | None = None,
+    progress_callback: Optional[Callable[[float, float, str], None]] = None,
 ) -> dict[str, Any]:
     """Transcode *src* (H.264) to HEVC / x265 with optimal automated settings.
 

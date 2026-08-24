@@ -20,6 +20,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import typer
 from InquirerPy import inquirer
@@ -81,16 +82,16 @@ history = HistoryManager()
     help="Scan a directory for H.264 videos, evaluate 20s samples, select, and transcode.",
 )
 def cmd_transcode(
-    path: str | None = typer.Argument(
+    path: Optional[str] = typer.Argument(
         None, help="Directory containing videos to process (default: current folder)."
     ),
-    min_gain: float | None = typer.Option(
+    min_gain: Optional[float] = typer.Option(
         None, "--min-gain", "-g", help="Minimum extrapolated gain % threshold (default: 10.0%)."
     ),
-    quality: int | None = typer.Option(
+    quality: Optional[int] = typer.Option(
         None, "--quality", "-q", help="VideoToolbox quality factor (1=best, 100=smallest)."
     ),
-    sample_seconds: int | None = typer.Option(
+    sample_seconds: Optional[int] = typer.Option(
         None, "--sample-seconds", "-s", help="Sample test duration in seconds (default: 20s)."
     ),
     no_sample: bool = typer.Option(
@@ -102,7 +103,7 @@ def cmd_transcode(
         "-y",
         help="Non-interactive mode (auto-transcode eligible files without prompts).",
     ),
-    all_codecs: bool | None = typer.Option(
+    all_codecs: Optional[bool] = typer.Option(
         None, "--all-codecs", "-a", help="Scan all non-HEVC formats, not only H.264."
     ),
 ) -> None:
@@ -136,7 +137,7 @@ def cmd_transcode(
 
 
 def _run_main_workflow(
-    path_arg: str | None = None,
+    path_arg: Optional[str] = None,
     min_gain: float = 10.0,
     quality: int = DEFAULT_QUALITY,
     sample_seconds: int = SAMPLE_SECONDS,
@@ -221,8 +222,8 @@ def _run_main_workflow(
             audio = get_audio_summary(f)
             size = f.stat().st_size if f.exists() else 0
 
-            est_size: int | None = None
-            est_gain: float | None = None
+            est_size: Optional[int] = None
+            est_gain: Optional[float] = None
             below_thresh = False
             selected = True
 
@@ -750,7 +751,7 @@ def cmd_history(
 # ---------------------------------------------------------------------------
 
 
-def main(args: list[str] | None = None) -> None:
+def main(args: Optional[list[str]] = None) -> None:
     """Main CLI entrypoint with smart subcommand dispatching."""
     argv = list(sys.argv[1:] if args is None else args)
 

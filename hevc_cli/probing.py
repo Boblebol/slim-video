@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 #: Video container extensions scanned recursively.
 SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
@@ -26,7 +26,7 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 
-def _ffprobe_field(path: Path, stream_selector: str, entry: str) -> str | None:
+def _ffprobe_field(path: Path, stream_selector: str, entry: str) -> Optional[str]:
     """Extract a single field from ffprobe output."""
     result = _run(
         [
@@ -46,21 +46,21 @@ def _ffprobe_field(path: Path, stream_selector: str, entry: str) -> str | None:
     return value if value and value != "N/A" else None
 
 
-def is_h264_codec(codec: str | None) -> bool:
+def is_h264_codec(codec: Optional[str]) -> bool:
     """Return True if codec string corresponds to H.264 / AVC."""
     if not codec:
         return False
     return codec.lower().strip() in H264_CODECS
 
 
-def is_hevc_codec(codec: str | None) -> bool:
+def is_hevc_codec(codec: Optional[str]) -> bool:
     """Return True if codec string corresponds to HEVC / H.265."""
     if not codec:
         return False
     return codec.lower().strip() in HEVC_CODECS
 
 
-def get_video_codec(path: Path) -> str | None:
+def get_video_codec(path: Path) -> Optional[str]:
     """Return the video codec name (e.g. ``"h264"``, ``"hevc"``)."""
     return _ffprobe_field(path, "v:0", "stream=codec_name")
 
