@@ -76,12 +76,33 @@ Une question fréquente lors du passage de H.264 à H.265 (HEVC) : **Y a-t-il un
 * **Aucun redimensionnement (*no downscaling*)** : Une source en **1080p** (1920×1080) reste en 1080p, une source **4K** (3840×2160) reste en 4K, une source **720p** reste en 720p.
 * **Framerate préservé** : Le nombre d'images par seconde d'origine (23.976 fps, 24 fps, 25 fps, 60 fps...) est conservé à la microseconde près.
 
-### 3. 🖼️ Qualité d'Image : Pourquoi le fichier est 40% à 60% plus léger ?
-* **H.264 (2003) vs H.265/HEVC (2013)** : Le H.264 découpait l'image en blocs rigides de 16×16 pixels. Le H.265 utilise des arbres de codage dynamiques (CTU) de 4×4 à 64×64 pixels et 35 directions de prédiction intra-image (contre 9 en H.264).
-* **Conséquence directe** : Pour restituer **la même finesse de détails perçue**, le H.265 nécessite **40% à 60% de débit (bitrate) en moins**. Le gain d'espace provient de l'intelligence mathématique de la compression, pas d'une coupe destructrice dans l'image.
+### 3. 🖼️ Qualité d'Image & Facteur de Qualité (`-q:v 50`)
+
+Une question légitime : **Est-ce que le réglage par défaut `Quality 50` va dégrader mes vidéos ?**
+👉 **Non.** Sur l'encodeur matériel **Apple VideoToolbox**, la valeur `50` est le **"sweetspot" officiel recommandé par Apple** pour obtenir une qualité **visuellement sans perte** (*visually lossless*, indiscernable de la source à l'œil nu sur écran 4K/OLED).
+
+#### 🎛️ Échelle de qualité VideoToolbox (1 à 100) :
+Contrairement au CRF logiciel (où 0 est sans perte et 51 très moche), l'échelle matérielle VideoToolbox fonctionne de **1 (qualité maximale / débit le plus élevé)** à **100 (compression maximale)** :
+
+| Valeur `-q:v` | Profil d'usage | Rendu visuel & Réduction d'espace |
+|---|---|---|
+| **`35 - 45`** | **Qualité Ultra-Haute / Archivage** | Débit vidéo très généreux pour puristes 4K HDR. Réduction de taille plus modérée (~25% à 35%). |
+| **`50`** *(Défaut)* | **Sweetspot Optimal (Visually Lossless)** | **Transparence visuelle totale à l'œil nu.** Réduction de taille optimale de **~40% à 60%**. |
+| **`60 - 70`** | **Compression Forte** | Gain d'espace maximal pour petits écrans ou vidéos d'appoint (~65% à 80%). |
+
+#### 💎 Pourquoi l'image reste-t-elle aussi nette à 50 ?
+* **H.264 (2003) vs H.265/HEVC (2013)** : Le H.264 découpait l'image en blocs rigides de 16×16 pixels. Le H.265 utilise des arbres de codage dynamiques (CTU) de 4×4 à 64×64 pixels et 35 directions de prédiction intra-image. Pour restituer **la même finesse de détails**, le H.265 a besoin de 40% à 60% de débit en moins. Le gain vient de l'intelligence mathématique, pas d'une coupe destructive.
 * **Encodage 10-bit (`p010le`)** : Même si la source est en 8-bit, `slim-video` encode en 10-bit (1,07 milliard de nuances de couleurs). Cela élimine les effets de bandes et d'artefacts (*banding*) dans les dégradés sombres, le ciel et les fumées.
-* **Spatial Adaptive Quantization (`-spatial_aq 1`)** : Préserve le piqué, la netteté des arêtes et le grain naturel de pellicule.
-* **Qualité VideoToolbox 50** : Le réglage *sweetspot* recommandé par Apple garantissant une transparence visuelle totale (indiscernable de la source à l'œil nu sur grand écran).
+* **Spatial Adaptive Quantization (`-spatial_aq 1`)** : Le silicium Apple analyse l'image en continu : il préserve le piqué, les textures fines et le grain de pellicule, et compresse plus fort uniquement les fonds neutres et zones planes.
+
+#### ⚙️ Ajuster la qualité selon vos préférences :
+```bash
+# Tester une qualité supérieure (ex: 45 ou 40) pour un dossier spécifique :
+slim-video /Volumes/UGREEN/Films -q 45
+
+# Ou définir définitivement une nouvelle qualité par défaut dans votre configuration :
+slim-video config set quality 45
+```
 
 ### 4. 🛡️ Garde-Fous Intelligents
 * **Échantillon réel de 20s** : Mesure sur le film réel le gain avant tout calcul.
