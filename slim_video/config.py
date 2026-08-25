@@ -38,6 +38,10 @@ class AppConfig(BaseModel):
         default="_originals_to_delete",
         description="Subdirectory name where originals are moved after transcoding",
     )
+    delete_original: bool = Field(
+        default=False,
+        description="Whether to permanently delete original files immediately after successful transcode instead of quarantine",
+    )
     all_codecs: bool = Field(
         default=False,
         description="Whether to process all non-HEVC video formats or only H.264",

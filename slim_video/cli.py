@@ -181,6 +181,13 @@ def cmd_transcode(
     all_codecs: Optional[bool] = typer.Option(
         None, "--all-codecs", "-a", help="Scan all non-HEVC formats, not only H.264."
     ),
+    delete_original: Optional[bool] = typer.Option(
+        None,
+        "--delete-original",
+        "--delete",
+        "-d",
+        help="Permanently delete original video files after successful transcoding instead of moving to quarantine.",
+    ),
 ) -> None:
     """Execute the core workflow: scan -> 20s sample test -> interactive tree -> transcode -> report."""
     missing = check_dependencies()
@@ -203,6 +210,7 @@ def cmd_transcode(
         sample_seconds if sample_seconds is not None else cfg.sample_duration_seconds
     )
     active_all_codecs = all_codecs if all_codecs is not None else cfg.all_codecs
+    active_delete_original = delete_original if delete_original is not None else cfg.delete_original
     run_samples = not no_sample and cfg.auto_sample_test
 
     try:
@@ -215,6 +223,7 @@ def cmd_transcode(
             yes=yes,
             dry_run=dry_run,
             all_codecs=active_all_codecs,
+            delete_original=active_delete_original,
         )
     except KeyboardInterrupt:
         console.print(
@@ -358,6 +367,7 @@ def _run_main_workflow(
     yes: bool = False,
     dry_run: bool = False,
     all_codecs: bool = False,
+    delete_original: bool = False,
 ) -> None:
     """Execute the core workflow: scan -> sample evaluation -> interactive tree -> transcode -> report."""
     if not path_arg:
@@ -567,6 +577,12 @@ def _run_main_workflow(
     est_saving = max(total_selected_size - total_selected_est, 0)
     est_pct = round((est_saving / total_selected_size) * 100, 1) if total_selected_size else 0.0
 
+    action_item = (
+        "  • Original Files Action : [bold red]Permanently Deleted after encode (Direct Deletion Mode)[/bold red]\n"
+        if delete_original
+        else f"  • Quarantine Folder     : [cyan]{root / '_originals_to_delete'}[/cyan]\n"
+    )
+
     console.print(
         Panel(
             f"[bold green]Ready to transcode {len(selected_items)} file(s) to x265 (HEVC)[/bold green]\n\n"
@@ -575,16 +591,21 @@ def _run_main_workflow(
             f"([bold green]Est. Saved: {fmt_bytes(est_saving)} / -{est_pct}%[/bold green])\n"
             f"  • Video Encoder         : VideoToolbox 10-bit HEVC (Quality: {quality})\n"
             f"  • Audio / Subtitles     : Stream Copied (100% Lossless)\n"
-            f"  • Quarantine Folder     : [cyan]{root / '_originals_to_delete'}[/cyan]\n"
+            f"{action_item}"
             f"  • Summary Report        : Will be saved to [cyan]{root / 'transcode_report.txt'}[/cyan]",
             title="📋  Transcode Summary",
-            border_style="green",
+            border_style="yellow" if delete_original else "green",
         )
     )
 
     if not yes:
+        prompt_msg = (
+            f"[bold red]⚠️  Delete originals & transcode[/bold red] {len(selected_items)} file(s)?"
+            if delete_original
+            else f"Start hardware transcoding {len(selected_items)} file(s)?"
+        )
         confirmed = inquirer.confirm(
-            message=f"Start hardware transcoding {len(selected_items)} file(s)?",
+            message=prompt_msg,
             default=True,
         ).execute()
         if not confirmed:
@@ -597,6 +618,7 @@ def _run_main_workflow(
         items=selected_items,
         total_scanned=len(file_items),
         quality=quality,
+        delete_original=delete_original,
     )
 
 
@@ -677,6 +699,7 @@ def _execute_batch(
     items: list[FileItem],
     total_scanned: int,
     quality: int,
+    delete_original: bool = False,
 ) -> None:
     """Execute batch transcoding, display progress, and write text report."""
     console.print(
@@ -692,6 +715,7 @@ def _execute_batch(
         start_time=start_timestamp,
         total_files_scanned=total_scanned,
         total_files_selected=len(items),
+        delete_original=delete_original,
     )
 
     with Progress(
@@ -746,6 +770,7 @@ def _execute_batch(
                 library_root=root,
                 quality=quality,
                 progress_callback=_progress_cb,
+                delete_original=delete_original,
             )
 
             file_elapsed = max(time.perf_counter() - file_start, 0.1)
@@ -772,6 +797,7 @@ def _execute_batch(
                     speed=last_speed[0],
                     output_path=result.get("output_path"),
                     quarantine_path=result.get("quarantine_path"),
+                    deleted_original=result.get("deleted_original", False),
                     status="ok",
                 )
                 summary.total_files_successful += 1
@@ -839,6 +865,13 @@ def _execute_batch(
 def _display_batch_summary(summary: BatchSummary, report_path: Path) -> None:
     """Print the final batch summary panel and detailed breakdown."""
     console.print("")
+
+    action_line = (
+        "  • Original Files Action: [bold red]Permanently Deleted (Direct Deletion Mode)[/bold red]\n"
+        if summary.delete_original
+        else f"  • Quarantine Subfolder : [cyan]{summary.directory / '_originals_to_delete'}[/cyan]\n"
+    )
+
     console.print(
         Panel(
             f"[bold green]Batch Transcoding Complete in {fmt_duration(summary.total_duration_sec)}![/bold green]\n\n"
@@ -848,7 +881,7 @@ def _display_batch_summary(summary: BatchSummary, report_path: Path) -> None:
             f"  • New HEVC Size        : [bold]{fmt_bytes(summary.total_final_bytes)}[/bold]\n"
             f"  • Disk Space Freed     : [bold green]{fmt_bytes(summary.total_saved_bytes)}[/bold green] "
             f"([bold green]-{summary.total_gain_pct}%[/bold green])\n"
-            f"  • Quarantine Subfolder : [cyan]{summary.directory / '_originals_to_delete'}[/cyan]\n"
+            f"{action_line}"
             f"  • Text Report Saved    : [bold cyan]{report_path}[/bold cyan]",
             title="🎉  Summary & Results",
             border_style="green",
@@ -877,10 +910,15 @@ def _display_batch_summary(summary: BatchSummary, report_path: Path) -> None:
         )
 
     console.print(t)
-    console.print(
-        "\n[dim]Original H.264 videos are safely moved in [cyan]_originals_to_delete/[/cyan]. "
-        "Review your new HEVC files and delete the quarantine folder when satisfied.[/dim]\n"
-    )
+    if summary.delete_original:
+        console.print(
+            "\n[bold green]✓ Original H.264 video files were permanently deleted as requested.[/bold green]\n"
+        )
+    else:
+        console.print(
+            "\n[dim]Original H.264 videos are safely moved in [cyan]_originals_to_delete/[/cyan]. "
+            "Review your new HEVC files and delete the quarantine folder when satisfied.[/dim]\n"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1081,11 +1119,17 @@ def cmd_config_wizard() -> None:
             default=cfg.quarantine_dir,
         ).execute()
 
+        new_delete_original = inquirer.confirm(
+            message="Permanently delete original files after transcoding (instead of moving to quarantine)?",
+            default=cfg.delete_original,
+        ).execute()
+
         config_manager.set("min_gain_percent", new_gain)
         config_manager.set("sample_duration_seconds", new_duration)
         config_manager.set("quality", new_quality)
         config_manager.set("auto_sample_test", str(new_auto_sample))
         config_manager.set("quarantine_dir", new_quarantine)
+        config_manager.set("delete_original", str(new_delete_original))
 
         console.print("\n[bold green]✅ All settings updated successfully![/bold green]\n")
         cmd_config_show()

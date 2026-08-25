@@ -208,6 +208,35 @@ def test_transcode_success(mock_run: MagicMock, tmp_path: Path) -> None:
     assert "_originals_to_delete" in str(quarantine)
 
 
+@patch("slim_video.transcoder._run_with_progress")
+def test_transcode_success_delete_original(mock_run: MagicMock, tmp_path: Path) -> None:
+    src = tmp_path / "test_delete.mp4"
+    src.write_bytes(b"0" * 1000)
+
+    def _side_effect(cmd: list[str], **kwargs: Any) -> MagicMock:
+        temp_out = src.with_name(f".tmp_{src.stem}.hevc.mkv")
+        temp_out.write_bytes(b"1" * 500)
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = _side_effect
+
+    result = transcode(src, library_root=tmp_path, quality=DEFAULT_QUALITY, delete_original=True)
+
+    assert result["status"] == "ok"
+    assert result["output_size"] == 500
+    assert result["deleted_original"] is True
+    assert result["quarantine_path"] is None
+
+    final_output = Path(result["output_path"])
+    assert final_output.exists()
+    assert final_output.name == "test_delete.hevc.mkv"
+
+    # Verify original was deleted, not quarantined
+    assert not src.exists()
+    quarantine_dir = tmp_path / "_originals_to_delete"
+    assert not quarantine_dir.exists()
+
+
 def test_supported_extensions_contains_common_formats() -> None:
     for ext in ("mp4", "mkv", "avi", "mov", "m4v"):
         assert ext in SUPPORTED_EXTENSIONS

@@ -190,6 +190,7 @@ class TranscodeRecord(BaseModel):
     speed: str
     output_path: Optional[str] = None
     quarantine_path: Optional[str] = None
+    deleted_original: bool = False
     status: str = "ok"  # "ok", "error", "skipped"
     error_message: Optional[str] = None
 
@@ -212,6 +213,7 @@ class BatchSummary(BaseModel):
     total_final_bytes: int = 0
     total_saved_bytes: int = 0
     total_gain_pct: float = 0.0
+    delete_original: bool = False
     records: list[TranscodeRecord] = Field(default_factory=list)
 
 

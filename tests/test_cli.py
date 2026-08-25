@@ -103,3 +103,25 @@ def test_cli_doctor_command() -> None:
     result = runner.invoke(app, ["doctor", "--no-benchmark"])
     assert result.exit_code == 0
     assert "Diagnostic Results" in result.output
+
+
+@patch("slim_video.cli.check_dependencies")
+@patch("slim_video.cli.find_h264_candidates")
+def test_cli_transcode_delete_original_flag(
+    mock_candidates: MagicMock, mock_deps: MagicMock, tmp_path: Path
+) -> None:
+    mock_deps.return_value = []
+    mock_candidates.return_value = ([], [])
+
+    result = runner.invoke(app, ["transcode", str(tmp_path), "--yes", "--delete-original"])
+    assert result.exit_code == 0
+
+
+def test_cli_config_delete_original() -> None:
+    result_set = runner.invoke(app, ["config", "set", "delete_original", "true"])
+    assert result_set.exit_code == 0
+    assert "Updated 'delete_original' to True" in result_set.output
+
+    result_get = runner.invoke(app, ["config", "get", "delete_original"])
+    assert result_get.exit_code == 0
+    assert "True" in result_get.output

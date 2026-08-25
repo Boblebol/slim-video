@@ -15,6 +15,7 @@ def transcode(
     library_root: Path,
     quality: int = DEFAULT_QUALITY,
     progress_callback: Optional[Callable[[float, float, str], None]] = None,
+    delete_original: bool = False,
 ) -> dict[str, Any]:
     """Transcode *src* (H.264) to HEVC / x265 with optimal automated settings.
 
@@ -25,17 +26,18 @@ def transcode(
     - All chapters and metadata (-map_metadata 0 -map_chapters 0)
     - Maximum Apple & media player compatibility (-tag:v hvc1)
 
-    On success, the original file is moved into the quarantine folder
-    ``_originals_to_delete`` preserving directory structure.
+    On success, the original file is either permanently deleted (if delete_original=True)
+    or moved into the quarantine folder ``_originals_to_delete``.
 
     Args:
         src: Path to source video file.
         library_root: Base folder being processed.
         quality: VideoToolbox quality (default 50).
         progress_callback: Progress callback (pct, elapsed, speed).
+        delete_original: If True, delete original file directly instead of moving to quarantine.
 
     Returns:
-        Dictionary with status ("ok"|"error"), output_path, quarantine_path, output_size.
+        Dictionary with status ("ok"|"error"), output_path, quarantine_path, output_size, deleted_original.
     """
     final_output = src.with_name(f"{src.stem}.hevc.mkv")
     temp_output = src.with_name(f".tmp_{src.stem}.hevc.mkv")
@@ -128,6 +130,7 @@ def transcode(
             "error_message": result.stderr.strip() or "FFmpeg encoding failed",
             "output_path": None,
             "quarantine_path": None,
+            "deleted_original": False,
             "output_size": 0,
         }
 
@@ -136,20 +139,27 @@ def transcode(
         final_output.unlink()
     shutil.move(str(temp_output), str(final_output))
 
-    # Move original to quarantine directory preserving relative path
-    quarantine_root = library_root / QUARANTINE_DIR
-    try:
-        relative = src.relative_to(library_root)
-    except ValueError:
-        relative = Path(src.name)
+    quarantine_dest: Optional[str] = None
+    if delete_original:
+        if src.exists():
+            src.unlink()
+    else:
+        # Move original to quarantine directory preserving relative path
+        quarantine_root = library_root / QUARANTINE_DIR
+        try:
+            relative = src.relative_to(library_root)
+        except ValueError:
+            relative = Path(src.name)
 
-    quarantine_dest = quarantine_root / relative
-    quarantine_dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(src), str(quarantine_dest))
+        q_path = quarantine_root / relative
+        q_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(src), str(q_path))
+        quarantine_dest = str(q_path)
 
     return {
         "status": "ok",
         "output_path": str(final_output),
-        "quarantine_path": str(quarantine_dest),
+        "quarantine_path": quarantine_dest,
+        "deleted_original": delete_original,
         "output_size": final_output.stat().st_size,
     }

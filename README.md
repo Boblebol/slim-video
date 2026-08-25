@@ -141,6 +141,9 @@ slim-video /Volumes/UGREEN/Films --min-gain 15 --quality 45
 
 # 4. Mode non-interactif / batch (automatisation) :
 slim-video /Volumes/UGREEN/Films --yes
+
+# 5. Mode suppression directe de l'ancien fichier après transcodage :
+slim-video /Volumes/UGREEN/Films --delete-original
 ```
 
 ---
@@ -277,11 +280,10 @@ Overall Reduction:    -54.9%
 
 ---
 
-## 🔒 Sécurité & Quarantaine
+## 🔒 Sécurité, Quarantaine & Suppression
 
-1. **Aucune suppression automatique directe.** Les originaux H.264 sont déplacés dans le sous-dossier `_originals_to_delete/` en conservant l'arborescence.
-2. **Vérifiez la lecture** de vos nouveaux fichiers `.hevc.mkv`.
-3. Supprimez `_originals_to_delete/` quand vous le souhaitez pour libérer physiquement l'espace disque.
+* **Comportement par défaut (Sécurité maximale)** : Les originaux H.264 ne sont **jamais** supprimés immédiatement. Ils sont déplacés proprement dans le sous-dossier `_originals_to_delete/` en conservant l'arborescence. Vous pouvez vérifier la qualité de vos `.hevc.mkv` et supprimer le dossier de quarantaine quand vous le souhaitez.
+* **Mode suppression directe (`--delete-original` / `-d`)** : Si vous manquez d'espace disque ou souhaitez un traitement 100% autonome sans étape de quarantaine intermédiaire, passez l'option `--delete-original` (ou `--delete`). Le fichier source original est supprimé automatiquement et immédiatement dès que le transcodage HEVC a réussi avec succès. Vous pouvez également définir ce comportement par défaut via `slim-video config set delete_original true`.
 
 ---
 

@@ -78,7 +78,9 @@ def format_report(summary: BatchSummary) -> str:
                 )
                 if rec.output_path:
                     lines.append(f"  • Output Video   : {rec.output_path}")
-                if rec.quarantine_path:
+                if rec.deleted_original:
+                    lines.append("  • Original Action: DELETED directly after encode")
+                elif rec.quarantine_path:
                     lines.append(f"  • Original Moved : {rec.quarantine_path}")
             elif rec.error_message:
                 lines.append(f"  • Error Reason   : {rec.error_message}")
@@ -86,17 +88,25 @@ def format_report(summary: BatchSummary) -> str:
 
     lines.append("")
     lines.append(bar)
-    lines.append("                              IMPORTANT SAFETY NOTICE")
+    lines.append("                              STORAGE & SAFETY NOTICE")
     lines.append(bar)
-    quarantine_dir = summary.directory / "_originals_to_delete"
-    lines.append("Original files were NOT permanently deleted.")
-    lines.append("They were safely moved to the quarantine folder:")
-    lines.append(f"  {quarantine_dir}")
-    lines.append("")
-    lines.append("Instructions:")
-    lines.append("1. Verify the playback and audio quality of your new .hevc.mkv videos.")
-    lines.append("2. Once satisfied, you can safely delete the '_originals_to_delete' directory")
-    lines.append(f"   to reclaim {fmt_bytes(summary.total_saved_bytes)} of physical storage.")
+    if summary.delete_original:
+        lines.append("Original files WERE permanently deleted after successful encoding.")
+        lines.append(
+            f"A total of {fmt_bytes(summary.total_saved_bytes)} of physical storage was immediately freed."
+        )
+    else:
+        quarantine_dir = summary.directory / "_originals_to_delete"
+        lines.append("Original files were NOT permanently deleted.")
+        lines.append("They were safely moved to the quarantine folder:")
+        lines.append(f"  {quarantine_dir}")
+        lines.append("")
+        lines.append("Instructions:")
+        lines.append("1. Verify the playback and audio quality of your new .hevc.mkv videos.")
+        lines.append(
+            "2. Once satisfied, you can safely delete the '_originals_to_delete' directory"
+        )
+        lines.append(f"   to reclaim {fmt_bytes(summary.total_saved_bytes)} of physical storage.")
     lines.append(bar)
     lines.append("")
 
