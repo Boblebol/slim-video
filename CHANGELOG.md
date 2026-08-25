@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-08-25
+## [1.4.0] - 2026-08-25
 
 ### Added
-- Direct deletion mode (`--delete-original` / `--delete` / `-d`) allowing optional immediate removal of source H.264 files upon successful HEVC encoding.
+- SSD Staging mode (`--ssd-staging`) writing intermediate encoded files into fast local SSD storage (`/tmp/slim-video/`) to eliminate head-thrashing and severe I/O bottlenecks on external mechanical HDDs (such as WD Black drives).
+- Custom temporary directory option (`--temp-dir <PATH>`) paired with `--ssd-staging` with strict validation to prevent accidental misuse.
+- Persistent `ssd_staging` and `temp_dir` configuration settings in `~/.slim_video_config.json` with step-by-step prompts in `slim-video config wizard`.
+- Safety pre-flight check guaranteeing at least 2× source file size of free disk space on the staging drive before encoding begins.
+- Live file transfer progress indicators and comprehensive structured logging (`logging.getLogger("slim_video.transcoder")`).
+- Safe cleanup guarantees ensuring all intermediate `.tmp` files are pruned immediately upon completion or cancellation, and original files are only modified after verified transfer.
+
+## [1.3.0] - 2026-08-25
 - Persistent `delete_original` configuration setting in `~/.slim_video_config.json` with step-by-step prompt in `slim-video config wizard`.
 - Interactive launcher menu when running `slim-video` in a TTY without arguments (browse current folder, custom path, `~/Movies`, `/Volumes`, config, doctor, history).
 - Non-destructive estimation command `slim-video estimate [PATH]` (`--dry-run`) displaying projected savings in a Rich table.

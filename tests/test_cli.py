@@ -125,3 +125,55 @@ def test_cli_config_delete_original() -> None:
     result_get = runner.invoke(app, ["config", "get", "delete_original"])
     assert result_get.exit_code == 0
     assert "True" in result_get.output
+
+
+def test_cli_temp_dir_without_ssd_staging_fails(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["transcode", str(tmp_path), "--temp-dir", "/tmp/slim-custom"])
+    assert result.exit_code == 1
+    assert "--temp-dir" in result.output
+    assert "--ssd-staging" in result.output
+
+
+@patch("slim_video.cli.check_dependencies")
+@patch("slim_video.cli.find_h264_candidates")
+def test_cli_ssd_staging_flags(
+    mock_candidates: MagicMock, mock_deps: MagicMock, tmp_path: Path
+) -> None:
+    mock_deps.return_value = []
+    mock_candidates.return_value = ([], [])
+
+    result = runner.invoke(app, ["transcode", str(tmp_path), "--yes", "--ssd-staging"])
+    assert result.exit_code == 0
+
+
+@patch("slim_video.cli.check_dependencies")
+@patch("slim_video.cli.find_h264_candidates")
+def test_cli_ssd_staging_with_custom_temp_dir(
+    mock_candidates: MagicMock, mock_deps: MagicMock, tmp_path: Path
+) -> None:
+    mock_deps.return_value = []
+    mock_candidates.return_value = ([], [])
+
+    custom_dir = str(tmp_path / "custom_temp")
+    result = runner.invoke(
+        app, ["transcode", str(tmp_path), "--yes", "--ssd-staging", "--temp-dir", custom_dir]
+    )
+    assert result.exit_code == 0
+
+
+def test_cli_config_ssd_staging_and_temp_dir() -> None:
+    result_set = runner.invoke(app, ["config", "set", "ssd_staging", "true"])
+    assert result_set.exit_code == 0
+    assert "Updated 'ssd_staging' to True" in result_set.output
+
+    result_get = runner.invoke(app, ["config", "get", "ssd_staging"])
+    assert result_get.exit_code == 0
+    assert "True" in result_get.output
+
+    result_set2 = runner.invoke(app, ["config", "set", "temp_dir", "/tmp/custom-slim"])
+    assert result_set2.exit_code == 0
+    assert "Updated 'temp_dir' to /tmp/custom-slim" in result_set2.output
+
+    result_get2 = runner.invoke(app, ["config", "get", "temp_dir"])
+    assert result_get2.exit_code == 0
+    assert "/tmp/custom-slim" in result_get2.output

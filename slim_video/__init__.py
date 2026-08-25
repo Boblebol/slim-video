@@ -1,6 +1,6 @@
 """slim-video — Smart Apple Silicon batch video transcoder with tree selection & sample estimation."""
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 __author__ = "Alexandre Enouf"
 __email__ = "alexandre.enouf@gmail.com"
 __url__ = "https://alexandre-enouf.fr"
@@ -9,6 +9,7 @@ __license__ = "MIT"
 
 from slim_video.core import (
     DEFAULT_QUALITY,
+    DEFAULT_STAGING_DIR,
     SAMPLE_SECONDS,
     SUPPORTED_EXTENSIONS,
     estimate_savings,
@@ -27,6 +28,7 @@ from slim_video.models import BatchSummary, FileItem, TranscodeRecord, TreeNode
 
 __all__ = [
     "DEFAULT_QUALITY",
+    "DEFAULT_STAGING_DIR",
     "SAMPLE_SECONDS",
     "SUPPORTED_EXTENSIONS",
     "BatchSummary",

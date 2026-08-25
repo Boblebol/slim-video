@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from slim_video.models import FileItem
 from slim_video.tree_selector import (
-    FileItem,
     build_file_tree,
     fmt_bytes,
     fmt_duration,

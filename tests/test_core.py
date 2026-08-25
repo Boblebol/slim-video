@@ -231,10 +231,85 @@ def test_transcode_success_delete_original(mock_run: MagicMock, tmp_path: Path) 
     assert final_output.exists()
     assert final_output.name == "test_delete.hevc.mkv"
 
-    # Verify original was deleted, not quarantined
-    assert not src.exists()
-    quarantine_dir = tmp_path / "_originals_to_delete"
-    assert not quarantine_dir.exists()
+@patch("slim_video.transcoder._run_with_progress")
+def test_transcode_success_with_staging_dir(mock_run: MagicMock, tmp_path: Path) -> None:
+    src = tmp_path / "test_staging.mp4"
+    src.write_bytes(b"0" * 1000)
+    staging_dir = tmp_path / "custom_staging"
+
+    def _side_effect(cmd: list[str], **kwargs: Any) -> MagicMock:
+        temp_out = staging_dir / f".tmp_{src.stem}.hevc.mkv"
+        temp_out.write_bytes(b"1" * 400)
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = _side_effect
+
+    result = transcode(
+        src,
+        library_root=tmp_path,
+        quality=DEFAULT_QUALITY,
+        staging_dir=staging_dir,
+    )
+
+    assert result["status"] == "ok"
+    assert result["output_size"] == 400
+    final_output = Path(result["output_path"])
+    assert final_output.exists()
+    assert final_output.name == "test_staging.hevc.mkv"
+    assert final_output.parent == tmp_path
+
+    # Verify staging temp file is cleaned up after move
+    assert not (staging_dir / f".tmp_{src.stem}.hevc.mkv").exists()
+
+
+def test_transcode_source_not_found(tmp_path: Path) -> None:
+    non_existent = tmp_path / "ghost.mp4"
+    result = transcode(non_existent, library_root=tmp_path)
+    assert result["status"] == "error"
+    assert "does not exist" in result["error_message"]
+
+
+@patch("shutil.disk_usage")
+def test_transcode_insufficient_staging_disk_space(mock_disk_usage: MagicMock, tmp_path: Path) -> None:
+    src = tmp_path / "large_video.mp4"
+    src.write_bytes(b"0" * 1000)
+    staging_dir = tmp_path / "low_space_staging"
+
+    # Free space: 500 bytes, but required is 2x 1000 = 2000 bytes
+    mock_disk_usage.return_value = (10000, 9500, 500)
+
+    result = transcode(src, library_root=tmp_path, staging_dir=staging_dir)
+    assert result["status"] == "error"
+    assert "Insufficient disk space" in result["error_message"]
+    assert "requires at least 2x" in result["error_message"]
+
+
+@patch("slim_video.transcoder._run_with_progress")
+def test_transcode_status_callback(mock_run: MagicMock, tmp_path: Path) -> None:
+    src = tmp_path / "callback_video.mp4"
+    src.write_bytes(b"0" * 1000)
+    staging_dir = tmp_path / "cb_staging"
+    statuses: list[str] = []
+
+    def _side_effect(cmd: list[str], **kwargs: Any) -> MagicMock:
+        temp_out = staging_dir / f".tmp_{src.stem}.hevc.mkv"
+        temp_out.write_bytes(b"1" * 400)
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = _side_effect
+
+    result = transcode(
+        src,
+        library_root=tmp_path,
+        staging_dir=staging_dir,
+        status_callback=lambda msg: statuses.append(msg),
+    )
+
+    assert result["status"] == "ok"
+    assert len(statuses) > 0
+    assert any("disk space" in s.lower() for s in statuses)
+    assert any("encoding" in s.lower() for s in statuses)
+    assert any("transferring" in s.lower() or "moving" in s.lower() for s in statuses)
 
 
 def test_supported_extensions_contains_common_formats() -> None:

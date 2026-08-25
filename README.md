@@ -10,7 +10,7 @@
 
 <p>
   <a href="https://github.com/Boblebol/slim-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Boblebol/slim-video/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI Status"></a>
-  <a href="https://github.com/Boblebol/slim-video/releases"><img src="https://img.shields.io/badge/version-1.3.0-blue.svg?style=flat-square&logo=git&logoColor=white" alt="Version 1.3.0"></a>
+  <a href="https://github.com/Boblebol/slim-video/releases"><img src="https://img.shields.io/badge/version-1.4.0-blue.svg?style=flat-square&logo=git&logoColor=white" alt="Version 1.4.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12%20|%203.13-3776AB.svg?style=flat-square&logo=python&logoColor=white" alt="Python Versions"></a>
   <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/badge/package%20manager-uv-DE5FE9.svg?style=flat-square&logo=uv&logoColor=white" alt="uv"></a>
   <a href="https://docs.pydantic.dev/"><img src="https://img.shields.io/badge/data%20models-Pydantic%20v2-E92063.svg?style=flat-square&logo=pydantic&logoColor=white" alt="Pydantic v2"></a>
@@ -171,6 +171,13 @@ slim-video /Volumes/UGREEN/Films --yes
 
 # 5. Mode suppression directe de l'ancien fichier après transcodage :
 slim-video /Volumes/UGREEN/Films --delete-original
+
+# 6. Mode Staging SSD temporaire (recommandé pour disques durs mécaniques / WD Black) :
+# Élimine les conflits de têtes de lecture/écriture en écrivant le fichier temporaire dans /tmp/slim-video/ :
+slim-video /Volumes/UGREEN/Films --ssd-staging
+
+# 7. Mode Staging SSD avec dossier temporaire personnalisé :
+slim-video /Volumes/UGREEN/Films --ssd-staging --temp-dir /tmp/my-staging
 ```
 
 ---

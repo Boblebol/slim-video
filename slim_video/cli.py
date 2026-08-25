@@ -188,6 +188,16 @@ def cmd_transcode(
         "-d",
         help="Permanently delete original video files after successful transcoding instead of moving to quarantine.",
     ),
+    ssd_staging: Optional[bool] = typer.Option(
+        None,
+        "--ssd-staging",
+        help="Use fast SSD staging (/tmp/slim-video) to eliminate head-thrashing on external mechanical HDDs.",
+    ),
+    temp_dir: Optional[str] = typer.Option(
+        None,
+        "--temp-dir",
+        help="Custom temporary SSD directory for staging (requires --ssd-staging).",
+    ),
 ) -> None:
     """Execute the core workflow: scan -> 20s sample test -> interactive tree -> transcode -> report."""
     missing = check_dependencies()
@@ -204,14 +214,63 @@ def cmd_transcode(
         raise typer.Exit(1)
 
     cfg = config_manager.load()
-    active_quality = quality if quality is not None else cfg.quality
-    active_min_gain = min_gain if min_gain is not None else cfg.min_gain_percent
-    active_sample_sec = (
-        sample_seconds if sample_seconds is not None else cfg.sample_duration_seconds
+    active_quality = (
+        quality
+        if quality is not None and not isinstance(quality, typer.models.OptionInfo)
+        else cfg.quality
     )
-    active_all_codecs = all_codecs if all_codecs is not None else cfg.all_codecs
-    active_delete_original = delete_original if delete_original is not None else cfg.delete_original
+    active_min_gain = (
+        min_gain
+        if min_gain is not None and not isinstance(min_gain, typer.models.OptionInfo)
+        else cfg.min_gain_percent
+    )
+    active_sample_sec = (
+        sample_seconds
+        if sample_seconds is not None and not isinstance(sample_seconds, typer.models.OptionInfo)
+        else cfg.sample_duration_seconds
+    )
+    active_all_codecs = (
+        all_codecs
+        if all_codecs is not None and not isinstance(all_codecs, typer.models.OptionInfo)
+        else cfg.all_codecs
+    )
+    active_delete_original = (
+        delete_original
+        if delete_original is not None
+        and not isinstance(delete_original, typer.models.OptionInfo)
+        else cfg.delete_original
+    )
+    active_ssd_staging = (
+        ssd_staging
+        if ssd_staging is not None and not isinstance(ssd_staging, typer.models.OptionInfo)
+        else cfg.ssd_staging
+    )
     run_samples = not no_sample and cfg.auto_sample_test
+
+    temp_dir_val = (
+        temp_dir
+        if temp_dir is not None and not isinstance(temp_dir, typer.models.OptionInfo)
+        else None
+    )
+
+    # --temp-dir cannot be used alone without --ssd-staging
+    if temp_dir_val is not None and not ssd_staging:
+        console.print(
+            Panel(
+                "[bold red]❌ Invalid option combination:[/bold red] "
+                "[yellow]--temp-dir[/yellow] cannot be used without enabling [bold cyan]--ssd-staging[/bold cyan].\n\n"
+                "To use a custom staging folder, specify both flags:\n"
+                f"  [bold cyan]slim-video --ssd-staging --temp-dir '{temp_dir_val}'[/bold cyan]",
+                title="⚠️ Option Error",
+                border_style="red",
+            )
+        )
+        raise typer.Exit(1)
+
+    active_temp_dir = temp_dir_val if temp_dir_val is not None else cfg.temp_dir
+    active_staging_path: Optional[Path] = (
+        Path(active_temp_dir) if active_ssd_staging else None
+    )
 
     try:
         _run_main_workflow(
@@ -224,6 +283,7 @@ def cmd_transcode(
             dry_run=dry_run,
             all_codecs=active_all_codecs,
             delete_original=active_delete_original,
+            staging_dir=active_staging_path,
         )
     except KeyboardInterrupt:
         console.print(
@@ -275,6 +335,9 @@ def cmd_estimate(
         yes=True,
         dry_run=True,
         all_codecs=all_codecs,
+        delete_original=False,
+        ssd_staging=False,
+        temp_dir=None,
     )
 
 
@@ -368,6 +431,7 @@ def _run_main_workflow(
     dry_run: bool = False,
     all_codecs: bool = False,
     delete_original: bool = False,
+    staging_dir: Optional[Path] = None,
 ) -> None:
     """Execute the core workflow: scan -> sample evaluation -> interactive tree -> transcode -> report."""
     if not path_arg:
@@ -389,11 +453,12 @@ def _run_main_workflow(
         return
 
     mode_tag = "[bold yellow][DRY-RUN / ESTIMATION ONLY][/bold yellow] " if dry_run else ""
+    staging_tag = f" · SSD Staging: {staging_dir}" if staging_dir else ""
     console.print(
         Panel.fit(
             f"{mode_tag}[bold cyan]slim-video[/bold cyan] [dim]v{__version__}[/dim] ── "
             "[bold white]H.264 → x265 (HEVC) Auto Transcoder[/bold white]\n"
-            f"[dim]Sample Test: {sample_seconds}s (mid-point) · Min Gain Threshold: {min_gain}% · Apple Silicon VideoToolbox[/dim]",
+            f"[dim]Sample Test: {sample_seconds}s (mid-point) · Min Gain Threshold: {min_gain}%{staging_tag} · Apple Silicon VideoToolbox[/dim]",
             border_style="yellow" if dry_run else "cyan",
         )
     )
@@ -583,6 +648,9 @@ def _run_main_workflow(
         else f"  • Quarantine Folder     : [cyan]{root / '_originals_to_delete'}[/cyan]\n"
     )
 
+    staging_item = (
+        f"  • SSD Staging Directory : [cyan]{staging_dir}[/cyan]\n" if staging_dir else ""
+    )
     console.print(
         Panel(
             f"[bold green]Ready to transcode {len(selected_items)} file(s) to x265 (HEVC)[/bold green]\n\n"
@@ -591,6 +659,7 @@ def _run_main_workflow(
             f"([bold green]Est. Saved: {fmt_bytes(est_saving)} / -{est_pct}%[/bold green])\n"
             f"  • Video Encoder         : VideoToolbox 10-bit HEVC (Quality: {quality})\n"
             f"  • Audio / Subtitles     : Stream Copied (100% Lossless)\n"
+            f"{staging_item}"
             f"{action_item}"
             f"  • Summary Report        : Will be saved to [cyan]{root / 'transcode_report.txt'}[/cyan]",
             title="📋  Transcode Summary",
@@ -619,6 +688,7 @@ def _run_main_workflow(
         total_scanned=len(file_items),
         quality=quality,
         delete_original=delete_original,
+        staging_dir=staging_dir,
     )
 
 
@@ -700,10 +770,12 @@ def _execute_batch(
     total_scanned: int,
     quality: int,
     delete_original: bool = False,
+    staging_dir: Optional[Path] = None,
 ) -> None:
     """Execute batch transcoding, display progress, and write text report."""
+    staging_msg = f" [dim](SSD staging: {staging_dir})[/dim]" if staging_dir else ""
     console.print(
-        f"\n[bold green]🚀  Starting batch transcoding for {len(items)} file(s)…[/bold green]\n"
+        f"\n[bold green]🚀  Starting batch transcoding for {len(items)} file(s)…[/bold green]{staging_msg}\n"
     )
 
     start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -758,6 +830,13 @@ def _execute_batch(
                     ),
                 )
 
+            def _status_cb(msg: str, _f: Path = f) -> None:
+                disp_curr = format_file_label(_f.name, extra_width_needed=40)
+                progress.update(
+                    file_task,
+                    description=f"[bold cyan]{disp_curr}[/bold cyan] — {msg}",
+                )
+
             disp_start = format_file_label(f.name, extra_width_needed=40)
             progress.update(
                 file_task,
@@ -770,7 +849,9 @@ def _execute_batch(
                 library_root=root,
                 quality=quality,
                 progress_callback=_progress_cb,
+                status_callback=_status_cb,
                 delete_original=delete_original,
+                staging_dir=staging_dir,
             )
 
             file_elapsed = max(time.perf_counter() - file_start, 0.1)
@@ -1025,8 +1106,11 @@ def cmd_config_show() -> None:
         "quality": "VideoToolbox HEVC quality factor (1=best, 100=smallest)",
         "auto_sample_test": "Whether to run automatic 20s sample tests on candidates",
         "quarantine_dir": "Subdirectory name where originals are moved after transcoding",
+        "delete_original": "Whether to permanently delete original files after transcoding instead of moving to quarantine",
         "all_codecs": "Whether to process all non-HEVC video formats or only H.264",
         "encoder": "FFmpeg HEVC video encoder (default: hevc_videotoolbox)",
+        "ssd_staging": "Whether to use SSD staging directory during transcoding (avoids HDD head-thrashing)",
+        "temp_dir": "Temporary SSD directory used when ssd_staging is enabled",
     }
 
     for k, v in cfg.model_dump().items():
@@ -1124,12 +1208,24 @@ def cmd_config_wizard() -> None:
             default=cfg.delete_original,
         ).execute()
 
+        new_ssd_staging = inquirer.confirm(
+            message="Use SSD staging directory (/tmp/slim-video) to eliminate head-thrashing on external HDDs?",
+            default=cfg.ssd_staging,
+        ).execute()
+
+        new_temp_dir = inquirer.text(
+            message="Custom temporary directory for SSD staging:",
+            default=cfg.temp_dir,
+        ).execute()
+
         config_manager.set("min_gain_percent", new_gain)
         config_manager.set("sample_duration_seconds", new_duration)
         config_manager.set("quality", new_quality)
         config_manager.set("auto_sample_test", str(new_auto_sample))
         config_manager.set("quarantine_dir", new_quarantine)
         config_manager.set("delete_original", str(new_delete_original))
+        config_manager.set("ssd_staging", str(new_ssd_staging))
+        config_manager.set("temp_dir", new_temp_dir)
 
         console.print("\n[bold green]✅ All settings updated successfully![/bold green]\n")
         cmd_config_show()

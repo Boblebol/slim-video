@@ -50,6 +50,14 @@ class AppConfig(BaseModel):
         default="hevc_videotoolbox",
         description="FFmpeg HEVC video encoder (default: hevc_videotoolbox)",
     )
+    ssd_staging: bool = Field(
+        default=False,
+        description="Whether to use SSD staging folder to eliminate head-thrashing on external mechanical HDDs",
+    )
+    temp_dir: str = Field(
+        default="/tmp/slim-video",
+        description="Custom temporary working directory when SSD staging is enabled",
+    )
 
 
 class ConfigManager:

@@ -22,7 +22,7 @@ from slim_video.probing import (
     is_h264_codec,
     is_hevc_codec,
 )
-from slim_video.transcoder import transcode
+from slim_video.transcoder import DEFAULT_STAGING_DIR, transcode
 
 
 def check_dependencies() -> list[str]:
@@ -32,6 +32,7 @@ def check_dependencies() -> list[str]:
 
 __all__ = [
     "DEFAULT_QUALITY",
+    "DEFAULT_STAGING_DIR",
     "H264_CODECS",
     "HEVC_CODECS",
     "QUARANTINE_DIR",
