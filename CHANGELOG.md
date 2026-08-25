@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-25
+
+### Added
+- Direct deletion mode (`--delete-original` / `--delete` / `-d`) allowing optional immediate removal of source H.264 files upon successful HEVC encoding.
+- Persistent `delete_original` configuration setting in `~/.slim_video_config.json` with step-by-step prompt in `slim-video config wizard`.
+- Interactive launcher menu when running `slim-video` in a TTY without arguments (browse current folder, custom path, `~/Movies`, `/Volumes`, config, doctor, history).
+- Non-destructive estimation command `slim-video estimate [PATH]` (`--dry-run`) displaying projected savings in a Rich table.
+- Animated scan discovery spinner and real-time 2-level sample estimation progress bars displaying active video, resolution, and encoding speed.
+- In-depth documentation section in `README.md` detailing lossless audio/subtitle stream copying, 10-bit color mechanics, and H.264 vs H.265 compression efficiency.
+
+### Changed
+- Full-width responsive tree viewport (`tree_selector.py`) utilizing total terminal width (`max_x`) with right-aligned metadata and middle-ellipsis (`fit_terminal_text`), eliminating text truncation.
+- Dynamic table rendering in Rich with full column expansion (`expand=True`, `overflow="fold"`) across `estimate`, `history stats`, and batch summaries.
+- Enhanced `--version` banner displaying live VideoToolbox hardware acceleration availability.
+- Graceful clean exit handling for `KeyboardInterrupt` (`Ctrl+C`, exit code `130`).
+
 ## [1.2.0] - 2026-08-24
 
 ### Changed
@@ -53,7 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic terminal file selector.
 - Cumulative history tracking in `~/.slim_video_history.json`.
 
-[Unreleased]: https://github.com/Boblebol/slim-video/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Boblebol/slim-video/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Boblebol/slim-video/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Boblebol/slim-video/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Boblebol/slim-video/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Boblebol/slim-video/releases/tag/v1.0.0
