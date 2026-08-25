@@ -30,6 +30,7 @@
 ## 📖 Sommaire
 
 - [✨ Fonctionnalités Clés](#-fonctionnalités-clés)
+- [🎬 Qualité, Fidélité Visuelle & Préservation](#-qualité-fidélité-visuelle--préservation)
 - [🖥 Prérequis](#-prérequis)
 - [🚀 Installation](#-installation)
 - [🩺 Diagnostic Système (`slim-video doctor`)](#-diagnostic-système-slim-video-doctor)
@@ -39,7 +40,7 @@
 - [⚙️ Configuration & Wizard (`slim-video config`)](#️-configuration--wizard-slim-video-config)
 - [📈 Historique & Économies à Vie (`slim-video history`)](#-historique--économies-à-vie-slim-video-history)
 - [📄 Rapport Texte Automatique](#-rapport-texte-automatique)
-- [🔒 Sécurité & Quarantaine](#-sécurité--quarantaine)
+- [🔒 Sécurité, Quarantaine & Suppression](#-sécurité-quarantaine--suppression)
 - [📦 Changelog & Versioning](#-changelog--versioning)
 - [👨‍💻 Auteur & Licence](#-auteur--licence)
 
@@ -58,7 +59,33 @@
 - 📈 **Suivi Cumulé des Économies (`history`)** : Visualisez l'espace disque total libéré au fil du temps sur votre Mac.
 - 📄 **Rapport Texte Détaillé (`transcode_report.txt`)** : Généré automatiquement à la fin de chaque session.
 - 🏥 **Diagnostic Système & Matériel (`slim-video doctor`)** : Valide en temps réel les dépendances, le support matériel Apple Silicon et lance un benchmark vidéo live (> 200 fps).
-- 🔒 **Sécurité Maximale** : Vos fichiers originaux ne sont jamais supprimés immédiatement mais déplacés en quarantaine dans `_originals_to_delete/`.
+- 🔒 **Sécurité & Flexibilité** : Vos fichiers originaux sont soit déplacés en quarantaine dans `_originals_to_delete/` par défaut, soit supprimés directement avec `--delete-original`.
+
+---
+
+## 🎬 Qualité, Fidélité Visuelle & Préservation
+
+Une question fréquente lors du passage de H.264 à H.265 (HEVC) : **Y a-t-il une dégradation de l'image, du son ou des pistes multilingues ?**
+
+### 1. 🔊 Audio & Multilingue : Zéro perte (Copie Bit à Bit 100% Lossless)
+* **Conservation intégrale de tous les flux (`-map 0`)** : Toutes les pistes audio (VF, VO, pistes 5.1/7.1 DTS-HD, Dolby Atmos, AC3, pistes de commentaires, audio descriptions...) sont capturées.
+* **Aucun ré-encodage (`-c:a copy`)** : Le son n'est **jamais décompressé ni recompressé**. Le flux binaire audio original est copié bit pour bit sans aucune altération de dynamique ou de qualité acoustique.
+* **Sous-titres & Chapitres (`-c:s copy`, `-map_chapters 0`, `-map_metadata 0`)** : Tous les sous-titres (SRT, ASS, PGS...) ainsi que le découpage en chapitres et métadonnées restent parfaitement intacts.
+
+### 2. 📐 Résolution & Fréquence d'Images : Strictement Identiques
+* **Aucun redimensionnement (*no downscaling*)** : Une source en **1080p** (1920×1080) reste en 1080p, une source **4K** (3840×2160) reste en 4K, une source **720p** reste en 720p.
+* **Framerate préservé** : Le nombre d'images par seconde d'origine (23.976 fps, 24 fps, 25 fps, 60 fps...) est conservé à la microseconde près.
+
+### 3. 🖼️ Qualité d'Image : Pourquoi le fichier est 40% à 60% plus léger ?
+* **H.264 (2003) vs H.265/HEVC (2013)** : Le H.264 découpait l'image en blocs rigides de 16×16 pixels. Le H.265 utilise des arbres de codage dynamiques (CTU) de 4×4 à 64×64 pixels et 35 directions de prédiction intra-image (contre 9 en H.264).
+* **Conséquence directe** : Pour restituer **la même finesse de détails perçue**, le H.265 nécessite **40% à 60% de débit (bitrate) en moins**. Le gain d'espace provient de l'intelligence mathématique de la compression, pas d'une coupe destructrice dans l'image.
+* **Encodage 10-bit (`p010le`)** : Même si la source est en 8-bit, `slim-video` encode en 10-bit (1,07 milliard de nuances de couleurs). Cela élimine les effets de bandes et d'artefacts (*banding*) dans les dégradés sombres, le ciel et les fumées.
+* **Spatial Adaptive Quantization (`-spatial_aq 1`)** : Préserve le piqué, la netteté des arêtes et le grain naturel de pellicule.
+* **Qualité VideoToolbox 50** : Le réglage *sweetspot* recommandé par Apple garantissant une transparence visuelle totale (indiscernable de la source à l'œil nu sur grand écran).
+
+### 4. 🛡️ Garde-Fous Intelligents
+* **Échantillon réel de 20s** : Mesure sur le film réel le gain avant tout calcul.
+* **Seuil d'exclusion automatique (< 10%)** : Si un film est déjà ultra-compressé et qu'un ré-encodage n'économiserait presque rien, il est automatiquement décoché.
 
 ---
 
