@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-28
+
+### Added
+- Machine-readable `--json` output across `estimate`, `doctor`, `config show`, and `history stats` for automation, dashboard, and script integrations.
+- Automatic non-interactive environment detection (`isatty`) ensuring seamless unattended execution in cron jobs, scripts, and pipes without blocking.
+- Native macOS desktop notification upon batch transcoding completion (`display notification` via AppleScript) with summary of freed storage.
+- Real-time global batch ETA estimate (`TimeRemainingColumn`) in the Rich progress bar.
+- Centralized `slim_video.constants` module consolidating default thresholds, codec sets, and storage paths.
+- Centralized `slim_video.formatting` module for byte, duration, label formatting, and desktop notifications.
+- Curses help bar hints highlighting Vim keys (`j`/`k` move, `h`/`l` fold/unfold) and quick action keys (`PageUp`/`PageDown`, `Home`/`End`).
+- Automated CI test coverage tracking with `pytest-cov` and `coverage.xml` build artifacts.
+
+### Changed
+- Major architectural refactoring modularizing `cli.py` (down to 628 lines, -54%), extracting `slim_video.workflow` for batch/dry-run orchestration and `slim_video.ui.prompts` for interactive menus and wizards.
+- Decoupled `tree_selector.py` from core transcoding logic and formatting utilities.
+- Factorized FFmpeg command generator (`build_transcode_command`) eliminating code duplication between VideoToolbox and libx265 paths.
+- Added rolling window caps to `HistoryManager` (`MAX_HISTORY_TESTS = 500`, `MAX_HISTORY_TRANSCODES = 2000`) preventing unbounded file growth.
+- Increased automated test coverage to 81% across 95 unit tests.
+
+### Fixed
+- Robust subprocess interrupt and termination safety in `estimator.py` terminating and killing child FFmpeg processes on `Ctrl+C` or unexpected exceptions.
+- Isolated test environment with autouse fixture preventing modifications to user configuration and history files during test runs.
+
 ## [1.4.0] - 2026-08-25
 
 ### Added
