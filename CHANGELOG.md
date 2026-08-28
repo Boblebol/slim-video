@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-08-28
+
+### Added
+- Complete and comprehensive technical guide and user manual in `DOCUMENTATION.md` detailing internal architecture, Mermaid execution pipeline, full CLI option matrix, SSD staging best practices, Bash scripting integrations, and troubleshooting.
+- Revamped marketing-oriented `README.md` featuring value proposition tables, visual feature cards, real-world benchmark metrics, and quickstart guides.
+- Direct bidirectional navigation links between `README.md` and `DOCUMENTATION.md`.
+
 ## [1.5.0] - 2026-08-28
 
 ### Added

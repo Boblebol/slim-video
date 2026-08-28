@@ -1,6 +1,6 @@
 """slim-video — Smart Apple Silicon batch video transcoder with tree selection & sample estimation."""
 
-__version__ = "1.5.0"
+__version__ = "1.5.1"
 __author__ = "Alexandre Enouf"
 __email__ = "alexandre.enouf@gmail.com"
 __url__ = "https://alexandre-enouf.fr"
