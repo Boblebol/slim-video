@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from slim_video.models import FileItem
 from slim_video.tree_selector import (
@@ -156,3 +157,36 @@ def test_select_files_interactive_non_interactive() -> None:
 
     selected = select_files_interactive(root, [f1, f2], non_interactive=True)
     assert selected == [f1]
+
+
+@patch("curses.color_pair", return_value=0)
+@patch("curses.init_pair")
+@patch("curses.use_default_colors")
+@patch("curses.curs_set")
+def test_interactive_tree_loop_keys(
+    mock_curs: MagicMock,
+    mock_colors: MagicMock,
+    mock_init_pair: MagicMock,
+    mock_color_pair: MagicMock,
+) -> None:
+    import curses
+    from unittest.mock import MagicMock
+
+    from slim_video.tree_selector import _interactive_tree_loop
+
+    root = Path("/media")
+    f1 = FileItem(root / "film1.mp4", Path("film1.mp4"), 1000, selected=True)
+    f2 = FileItem(root / "film2.mp4", Path("film2.mp4"), 2000, selected=False)
+
+    stdscr = MagicMock()
+    stdscr.getmaxyx.return_value = (24, 80)
+    # Sequence of keys: DOWN, SPACE, ENTER
+    stdscr.getch.side_effect = [
+        curses.KEY_DOWN,
+        ord(" "),
+        10,  # Enter
+    ]
+
+    selected = _interactive_tree_loop(stdscr, root, [f1, f2])
+    assert f1 in selected
+    assert f2 in selected
