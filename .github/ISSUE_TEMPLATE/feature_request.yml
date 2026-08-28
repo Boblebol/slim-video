@@ -1,0 +1,27 @@
+name: 💡 Suggestion de Fonctionnalité
+description: Proposez une nouvelle idée, codec ou amélioration d'interface pour slim-video.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vous avez une idée pour rendre **slim-video** encore plus performant ou ergonomique ? Partagez-la ici !
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème ou Besoin
+      description: À quel besoin ou limitation cette fonctionnalité répond-elle ?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution Proposée
+      description: Décrivez précisément comment la fonctionnalité devrait fonctionner.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Envisagées
+      description: Quelles solutions alternatives avez-vous testées ?

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/Boblebol/slim-video/discussions
+    about: Posez des questions et échangez autour de slim-video.
+  - name: 🌐 Portfolio Alexandre Enouf
+    url: https://alexandre-enouf.fr
+    about: Découvrez les autres projets et labs de l'auteur.

@@ -1,0 +1,40 @@
+name: 🐛 Rapport de Bug
+description: Signalez un comportement inattendu ou un dysfonctionnement dans slim-video.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de signaler un bug dans **slim-video** !
+  - type: input
+    id: environment
+    attributes:
+      label: Environnement & Matériel
+      description: Précisez votre machine (ex: Mac M1/M2/M3/M4, macOS Sonoma 14.5), version de Python et ffmpeg.
+      placeholder: Apple Silicon M2 Pro, macOS 14.5, Python 3.12, ffmpeg 7.0
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description du Bug
+      description: Décrivez clairement ce qui s'est produit.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes pour Reproduire
+      description: Comment reproduire le comportement ?
+      placeholder: |
+        1. Exécuter 'slim-video convert ./videos'
+        2. Sélectionner le codec 'hevc_videotoolbox'
+        3. Observer l'erreur...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Sortie Terminal
+      description: Collez ici la sortie du terminal ou la trace d'erreur (utiliser les balises de code).
+      render: shell

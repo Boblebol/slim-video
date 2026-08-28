@@ -1,0 +1,9 @@
+# ==============================================================================
+# GitHub CODEOWNERS
+# ==============================================================================
+# Defines the sole repository owner and primary reviewer.
+# External PRs and critical paths require review and approval from @Boblebol.
+
+* @Boblebol
+.github/ @Boblebol
+pyproject.toml @Boblebol
