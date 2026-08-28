@@ -15,51 +15,32 @@ Features:
 
 from __future__ import annotations
 
-import os
 import sys
-import time
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import typer
-from InquirerPy import inquirer
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
 from rich.table import Table
 
 from slim_video import __author__, __github__, __url__, __version__
 from slim_video.config import config_manager
 from slim_video.core import (
-    DEFAULT_QUALITY,
-    SAMPLE_SECONDS,
     check_dependencies,
-    estimate_savings,
     find_h264_candidates,
-    get_audio_summary,
-    get_duration,
-    get_fps,
-    get_resolution,
-    get_video_codec,
-    transcode,
 )
 from slim_video.doctor import check_videotoolbox_support, run_all_doctor_checks
+from slim_video.formatting import fmt_bytes
 from slim_video.history import HistoryManager
-from slim_video.models import BatchSummary, FileItem, TranscodeRecord
-from slim_video.report import save_report_file
-from slim_video.tree_selector import (
-    fit_terminal_text,
-    fmt_bytes,
-    fmt_duration,
-    select_files_interactive,
+from slim_video.ui.prompts import (
+    prompt_interactive_folder_selection,
+    run_config_wizard,
+)
+from slim_video.workflow import (
+    display_estimation_table,
+    execute_batch,
+    run_main_workflow,
 )
 
 # ---------------------------------------------------------------------------
@@ -67,13 +48,6 @@ from slim_video.tree_selector import (
 # ---------------------------------------------------------------------------
 
 console = Console()
-
-
-def format_file_label(name: str, extra_width_needed: int = 40) -> str:
-    """Format file name to dynamically fit terminal width without arbitrary cut-off."""
-    term_width = console.width if console.width else 80
-    max_len = max(30, term_width - extra_width_needed)
-    return fit_terminal_text(name, max_len)
 
 
 CLI_HELP_EPILOG = """
@@ -198,10 +172,20 @@ def cmd_transcode(
         "--temp-dir",
         help="Custom temporary SSD directory for staging (requires --ssd-staging).",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output machine-readable JSON format for scripting and automation.",
+    ),
 ) -> None:
     """Execute the core workflow: scan -> 20s sample test -> interactive tree -> transcode -> report."""
     missing = check_dependencies()
     if missing:
+        if json_output:
+            import json
+
+            print(json.dumps({"error": f"Missing required dependencies: {', '.join(missing)}"}))
+            raise typer.Exit(1)
         console.print(
             Panel(
                 f"[bold red]❌ Missing required dependencies: {', '.join(missing)}[/bold red]\n\n"
@@ -236,8 +220,7 @@ def cmd_transcode(
     )
     active_delete_original = (
         delete_original
-        if delete_original is not None
-        and not isinstance(delete_original, typer.models.OptionInfo)
+        if delete_original is not None and not isinstance(delete_original, typer.models.OptionInfo)
         else cfg.delete_original
     )
     active_ssd_staging = (
@@ -255,6 +238,17 @@ def cmd_transcode(
 
     # --temp-dir cannot be used alone without --ssd-staging
     if temp_dir_val is not None and not ssd_staging:
+        if json_output:
+            import json
+
+            print(
+                json.dumps(
+                    {
+                        "error": "--temp-dir cannot be used without enabling --ssd-staging.",
+                    }
+                )
+            )
+            raise typer.Exit(1)
         console.print(
             Panel(
                 "[bold red]❌ Invalid option combination:[/bold red] "
@@ -268,12 +262,10 @@ def cmd_transcode(
         raise typer.Exit(1)
 
     active_temp_dir = temp_dir_val if temp_dir_val is not None else cfg.temp_dir
-    active_staging_path: Optional[Path] = (
-        Path(active_temp_dir) if active_ssd_staging else None
-    )
+    active_staging_path: Optional[Path] = Path(active_temp_dir) if active_ssd_staging else None
 
     try:
-        _run_main_workflow(
+        run_main_workflow(
             path_arg=path,
             min_gain=active_min_gain,
             quality=active_quality,
@@ -284,11 +276,21 @@ def cmd_transcode(
             all_codecs=active_all_codecs,
             delete_original=active_delete_original,
             staging_dir=active_staging_path,
+            history_manager=history,
+            interactive_folder_prompt=lambda: prompt_interactive_folder_selection(
+                on_estimate=lambda target: cmd_estimate(path=target),
+                on_doctor=lambda: cmd_doctor(benchmark=True),
+                on_config=lambda: cmd_config_wizard(),
+                on_history=lambda: cmd_history_stats(),
+            ),
+            find_candidates_fn=find_h264_candidates,
+            json_output=json_output,
         )
     except KeyboardInterrupt:
-        console.print(
-            "\n[yellow]⚠️  Process cancelled by user (Ctrl+C). Exiting cleanly.[/yellow]\n"
-        )
+        if not json_output:
+            console.print(
+                "\n[yellow]⚠️  Process cancelled by user (Ctrl+C). Exiting cleanly.[/yellow]\n"
+            )
         raise typer.Exit(130) from None
 
 
@@ -324,6 +326,11 @@ def cmd_estimate(
     all_codecs: Optional[bool] = typer.Option(
         None, "--all-codecs", "-a", help="Scan all non-HEVC formats, not only H.264."
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output machine-readable JSON format for scripting and automation.",
+    ),
 ) -> None:
     """Run non-destructive scan and 20s test estimation, displaying a detailed breakdown table."""
     cmd_transcode(
@@ -338,668 +345,18 @@ def cmd_estimate(
         delete_original=False,
         ssd_staging=False,
         temp_dir=None,
+        json_output=json_output,
     )
 
 
 # ---------------------------------------------------------------------------
-# Core Workflow Implementation
+# Backwards Compatibility Aliases
 # ---------------------------------------------------------------------------
 
-
-def _prompt_interactive_folder_selection() -> str:
-    """Display an interactive menu to choose folder or utility."""
-    console.print(
-        Panel.fit(
-            f"[bold cyan]🎬 slim-video[/bold cyan] [dim]v{__version__}[/dim] ── "
-            "[bold white]Smart Video Batch Transcoder[/bold white]\n"
-            "[dim]Select an option or directory below to begin:[/dim]",
-            border_style="cyan",
-        )
-    )
-
-    cwd_path = os.getcwd()
-    movies_path = str(Path.home() / "Movies")
-
-    choices = [
-        f"📁 Current Directory ({cwd_path})",
-        "🔍 Enter Custom Directory Path…",
-    ]
-    if Path(movies_path).exists():
-        choices.append(f"🏠 Movies Folder ({movies_path})")
-    if Path("/Volumes").exists():
-        volumes = [
-            p for p in Path("/Volumes").iterdir() if p.is_dir() and not p.name.startswith(".")
-        ]
-        if volumes:
-            choices.append("💾 Browse External Volumes (/Volumes)…")
-
-    choices.extend(
-        [
-            "📊 Estimate Potential Space Savings (Dry Run)",
-            "🩺 Run Hardware & System Diagnostics (Doctor)",
-            "⚙️  Open Configuration Settings",
-            "📈 View Lifetime Savings History",
-            "🚪 Exit",
-        ]
-    )
-
-    choice = inquirer.select(
-        message="What would you like to do?",
-        choices=choices,
-        default=choices[0],
-    ).execute()
-
-    if choice.startswith("📁 Current Directory"):
-        return cwd_path
-    elif choice.startswith("🔍 Enter Custom"):
-        selected_text = inquirer.text(
-            message="Enter full folder path:",
-            default=cwd_path,
-        ).execute()
-        return str(selected_text).strip()
-    elif choice.startswith("🏠 Movies Folder"):
-        return movies_path
-    elif choice.startswith("💾 Browse External Volumes"):
-        vol_choices = [str(p) for p in Path("/Volumes").iterdir() if p.is_dir()]
-        selected_vol = inquirer.select(message="Select Volume:", choices=vol_choices).execute()
-        return str(selected_vol)
-    elif choice.startswith("📊 Estimate"):
-        target = inquirer.text(message="Folder to estimate:", default=cwd_path).execute()
-        cmd_estimate(path=target)
-        sys.exit(0)
-    elif choice.startswith("🩺 Run Hardware"):
-        cmd_doctor(benchmark=True)
-        sys.exit(0)
-    elif choice.startswith("⚙️  Open Configuration"):
-        cmd_config_wizard()
-        sys.exit(0)
-    elif choice.startswith("📈 View Lifetime"):
-        cmd_history_stats()
-        sys.exit(0)
-    else:
-        console.print("[dim]Goodbye![/dim]")
-        sys.exit(0)
-
-
-def _run_main_workflow(
-    path_arg: Optional[str] = None,
-    min_gain: float = 10.0,
-    quality: int = DEFAULT_QUALITY,
-    sample_seconds: int = SAMPLE_SECONDS,
-    run_samples: bool = True,
-    yes: bool = False,
-    dry_run: bool = False,
-    all_codecs: bool = False,
-    delete_original: bool = False,
-    staging_dir: Optional[Path] = None,
-) -> None:
-    """Execute the core workflow: scan -> sample evaluation -> interactive tree -> transcode -> report."""
-    if not path_arg:
-        if sys.stdin.isatty() and not yes:
-            path_arg = _prompt_interactive_folder_selection()
-        else:
-            path_arg = os.getcwd()
-
-    root = Path(path_arg).resolve()
-    if not root.exists() or not root.is_dir():
-        console.print(
-            Panel(
-                f"[bold red]❌ Directory not found:[/bold red] [yellow]{root}[/yellow]\n\n"
-                "Please verify the path and ensure the folder exists.",
-                title="⚠️ Invalid Folder",
-                border_style="red",
-            )
-        )
-        return
-
-    mode_tag = "[bold yellow][DRY-RUN / ESTIMATION ONLY][/bold yellow] " if dry_run else ""
-    staging_tag = f" · SSD Staging: {staging_dir}" if staging_dir else ""
-    console.print(
-        Panel.fit(
-            f"{mode_tag}[bold cyan]slim-video[/bold cyan] [dim]v{__version__}[/dim] ── "
-            "[bold white]H.264 → x265 (HEVC) Auto Transcoder[/bold white]\n"
-            f"[dim]Sample Test: {sample_seconds}s (mid-point) · Min Gain Threshold: {min_gain}%{staging_tag} · Apple Silicon VideoToolbox[/dim]",
-            border_style="yellow" if dry_run else "cyan",
-        )
-    )
-
-    # 1. Scan files with animated spinner & real-time file discovery
-    with console.status(
-        f"[bold cyan]🔍 Scanning files in[/bold cyan] [yellow]{root.name}/[/yellow]…",
-        spinner="dots",
-    ) as scan_status:
-
-        def _scan_progress(cur_file: Path, cand_count: int, hevc_count: int) -> None:
-            disp_name = format_file_label(cur_file.name, extra_width_needed=45)
-            scan_status.update(
-                f"[bold cyan]🔍 Scanning directory…[/bold cyan] [yellow]{disp_name}[/yellow] "
-                f"[dim]({cand_count} candidates, {hevc_count} HEVC found)[/dim]"
-            )
-
-        candidates, already_hevc = find_h264_candidates(
-            root, all_codecs=all_codecs, progress_callback=_scan_progress
-        )
-
-    if already_hevc:
-        console.print(
-            f"[green]✓  {len(already_hevc)} video file(s) already encoded in HEVC/x265 (skipped).[/green]"
-        )
-
-    if not candidates:
-        if already_hevc:
-            console.print(
-                Panel(
-                    "[bold green]🎉 All video files in this folder are already optimized in HEVC![/bold green]\n"
-                    "No further transcoding is needed.",
-                    title="✨ Perfectly Optimized",
-                    border_style="green",
-                )
-            )
-        else:
-            console.print(
-                Panel(
-                    f"[yellow]No H.264 video files found in:[/yellow] [cyan]{root}[/cyan]\n\n"
-                    "[dim]Tip: If your videos use other formats (e.g. MPEG-4, VC-1), use the [bold]--all-codecs[/bold] flag.[/dim]",
-                    title="ℹ️ No Files Found",
-                    border_style="yellow",
-                )
-            )
-        return
-
-    # 2. Probe metadata & run 20s middle sample evaluation with live animation
-    console.print(
-        f"[bold blue]🧪  Evaluating {len(candidates)} candidate file(s) "
-        f"({sample_seconds}s sample test at mid-point)…[/bold blue]"
-    )
-
-    file_items: list[FileItem] = []
-    below_thresh_count = 0
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        MofNCompleteColumn(),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Evaluating videos…", total=len(candidates))
-
-        for f in candidates:
-            try:
-                rel = f.relative_to(root)
-            except ValueError:
-                rel = Path(f.name)
-
-            codec = get_video_codec(f) or "h264"
-            res = get_resolution(f)
-            fps = get_fps(f)
-            dur = get_duration(f)
-            audio = get_audio_summary(f)
-            size = f.stat().st_size if f.exists() else 0
-
-            disp_f = format_file_label(f.name, extra_width_needed=35)
-            progress.update(
-                task,
-                description=(
-                    f"Analyzing [bold cyan]{disp_f}[/bold cyan] [dim]({codec} · {res})[/dim]…"
-                ),
-            )
-
-            est_size: Optional[int] = None
-            est_gain: Optional[float] = None
-            below_thresh = False
-            selected = True
-
-            if run_samples and size > 0:
-
-                def _sample_cb(pct: float, _elapsed: float, speed: str, _f: Path = f) -> None:
-                    disp_sub = format_file_label(_f.name, extra_width_needed=35)
-                    progress.update(
-                        task,
-                        description=(
-                            f"Sample [bold cyan]{disp_sub}[/bold cyan] "
-                            f"[green]{pct:3.0f}%[/green] @ [yellow]{speed}[/yellow]"
-                        ),
-                    )
-
-                est_res = estimate_savings(
-                    path=f,
-                    quality=quality,
-                    sample_seconds=sample_seconds,
-                    callback=_sample_cb,
-                )
-
-                if "error" not in est_res:
-                    est_size = est_res["estimated_size"]
-                    est_gain = est_res["gain_pct"]
-                    if est_gain < min_gain:
-                        below_thresh = True
-                        selected = False  # Auto-uncheck: gain < threshold
-                        below_thresh_count += 1
-                    else:
-                        selected = True
-
-                    history.record_test(
-                        file_path=str(f),
-                        codec=codec,
-                        original_size=est_res["original_size"],
-                        estimated_size=est_size,
-                        gain_pct=est_gain,
-                        ratio=est_res["ratio"],
-                        quality=quality,
-                    )
-
-            file_items.append(
-                FileItem(
-                    path=f,
-                    rel_path=rel,
-                    size=size,
-                    codec=codec,
-                    resolution=res,
-                    fps=fps,
-                    duration=dur,
-                    audio=audio,
-                    selected=selected,
-                    estimated_size=est_size,
-                    estimated_gain_pct=est_gain,
-                    below_threshold=below_thresh,
-                )
-            )
-            progress.advance(task)
-
-    if below_thresh_count > 0:
-        console.print(
-            f"[dim]ℹ️  {below_thresh_count} file(s) had an estimated gain < {min_gain}% and were automatically unchecked.[/dim]"
-        )
-
-    # 3. Dry-Run Table display if estimate-only requested
-    if dry_run:
-        _display_estimation_table(root=root, items=file_items, min_gain=min_gain)
-        return
-
-    # 4. Interactive Collapsible Tree Selector
-    console.print(
-        f"\n[bold green]Found {len(file_items)} candidate file(s). Opening interactive tree selection…[/bold green]"
-    )
-
-    selected_items = select_files_interactive(
-        root=root,
-        file_items=file_items,
-        non_interactive=yes,
-    )
-
-    if not selected_items:
-        console.print("[yellow]No files selected. Transcoding aborted.[/yellow]\n")
-        return
-
-    # 5. Pre-transcode summary
-    total_selected_size = sum(item.size for item in selected_items)
-    total_selected_est = sum(
-        (item.estimated_size if item.estimated_size is not None else item.size)
-        for item in selected_items
-    )
-    est_saving = max(total_selected_size - total_selected_est, 0)
-    est_pct = round((est_saving / total_selected_size) * 100, 1) if total_selected_size else 0.0
-
-    action_item = (
-        "  • Original Files Action : [bold red]Permanently Deleted after encode (Direct Deletion Mode)[/bold red]\n"
-        if delete_original
-        else f"  • Quarantine Folder     : [cyan]{root / '_originals_to_delete'}[/cyan]\n"
-    )
-
-    staging_item = (
-        f"  • SSD Staging Directory : [cyan]{staging_dir}[/cyan]\n" if staging_dir else ""
-    )
-    console.print(
-        Panel(
-            f"[bold green]Ready to transcode {len(selected_items)} file(s) to x265 (HEVC)[/bold green]\n\n"
-            f"  • Source Total Size     : [bold]{fmt_bytes(total_selected_size)}[/bold]\n"
-            f"  • Projected HEVC Size   : [bold]{fmt_bytes(total_selected_est)}[/bold] "
-            f"([bold green]Est. Saved: {fmt_bytes(est_saving)} / -{est_pct}%[/bold green])\n"
-            f"  • Video Encoder         : VideoToolbox 10-bit HEVC (Quality: {quality})\n"
-            f"  • Audio / Subtitles     : Stream Copied (100% Lossless)\n"
-            f"{staging_item}"
-            f"{action_item}"
-            f"  • Summary Report        : Will be saved to [cyan]{root / 'transcode_report.txt'}[/cyan]",
-            title="📋  Transcode Summary",
-            border_style="yellow" if delete_original else "green",
-        )
-    )
-
-    if not yes:
-        prompt_msg = (
-            f"[bold red]⚠️  Delete originals & transcode[/bold red] {len(selected_items)} file(s)?"
-            if delete_original
-            else f"Start hardware transcoding {len(selected_items)} file(s)?"
-        )
-        confirmed = inquirer.confirm(
-            message=prompt_msg,
-            default=True,
-        ).execute()
-        if not confirmed:
-            console.print("[yellow]Aborted by user.[/yellow]\n")
-            return
-
-    # 6. Run Transcoding Batch
-    _execute_batch(
-        root=root,
-        items=selected_items,
-        total_scanned=len(file_items),
-        quality=quality,
-        delete_original=delete_original,
-        staging_dir=staging_dir,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Estimation Table Display
-# ---------------------------------------------------------------------------
-
-
-def _display_estimation_table(root: Path, items: list[FileItem], min_gain: float) -> None:
-    """Print an estimation summary table for dry-run inspection."""
-    table = Table(
-        title=f"📊 Potential Space Savings Estimation ({root.name})",
-        expand=True,
-        border_style="cyan",
-    )
-    table.add_column("Video File", style="cyan", no_wrap=False, overflow="fold")
-    table.add_column("Format", style="dim", justify="center")
-    table.add_column("Original", justify="right")
-    table.add_column("Est. HEVC", justify="right")
-    table.add_column("Est. Gain", justify="right", style="bold")
-    table.add_column("Recommendation", justify="center")
-
-    total_orig = 0
-    total_est = 0
-    eligible_count = 0
-
-    for it in items:
-        total_orig += it.size
-        est = it.estimated_size if it.estimated_size is not None else it.size
-        total_est += est
-
-        gain_str = f"-{it.estimated_gain_pct:.1f}%" if it.estimated_gain_pct is not None else "N/A"
-        if it.estimated_gain_pct is not None and it.estimated_gain_pct >= min_gain:
-            rec = "[bold green]✅ Transcode[/bold green]"
-            gain_styled = f"[green]{gain_str}[/green]"
-            eligible_count += 1
-        elif it.estimated_gain_pct is not None:
-            rec = f"[yellow]⏭ Skip (< {min_gain}%)[/yellow]"
-            gain_styled = f"[yellow]{gain_str}[/yellow]"
-        else:
-            rec = "[dim]Unknown[/dim]"
-            gain_styled = f"[dim]{gain_str}[/dim]"
-
-        table.add_row(
-            str(it.rel_path),
-            f"{it.codec} ({it.resolution})",
-            fmt_bytes(it.size),
-            fmt_bytes(est),
-            gain_styled,
-            rec,
-        )
-
-    console.print(table)
-
-    saved = max(total_orig - total_est, 0)
-    pct = round((saved / total_orig) * 100, 1) if total_orig else 0.0
-
-    console.print(
-        Panel(
-            f"Candidate Files Scanned : [bold]{len(items)} file(s)[/bold] ({fmt_bytes(total_orig)})\n"
-            f"Recommended to Transcode: [bold green]{eligible_count} file(s)[/bold green]\n"
-            f"Estimated Projected Size: [bold]{fmt_bytes(total_est)}[/bold]\n"
-            f"Total Projected Savings : [bold green]{fmt_bytes(saved)}[/bold green] ([bold green]-{pct}%[/bold green])\n\n"
-            f"[dim]To perform the actual transcoding, run: [bold cyan]slim-video '{root}'[/bold cyan][/dim]",
-            title="✨ Dry-Run Estimation Results",
-            border_style="green",
-        )
-    )
-
-
-# ---------------------------------------------------------------------------
-# Batch Execution & Reporting
-# ---------------------------------------------------------------------------
-
-
-def _execute_batch(
-    root: Path,
-    items: list[FileItem],
-    total_scanned: int,
-    quality: int,
-    delete_original: bool = False,
-    staging_dir: Optional[Path] = None,
-) -> None:
-    """Execute batch transcoding, display progress, and write text report."""
-    staging_msg = f" [dim](SSD staging: {staging_dir})[/dim]" if staging_dir else ""
-    console.print(
-        f"\n[bold green]🚀  Starting batch transcoding for {len(items)} file(s)…[/bold green]{staging_msg}\n"
-    )
-
-    start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    start_perf = time.perf_counter()
-
-    summary = BatchSummary(
-        directory=root,
-        encoder_name="Apple VideoToolbox (hevc_videotoolbox - 10-bit)",
-        start_time=start_timestamp,
-        total_files_scanned=total_scanned,
-        total_files_selected=len(items),
-        delete_original=delete_original,
-    )
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("{task.description}"),
-        BarColumn(),
-        MofNCompleteColumn(),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        batch_task = progress.add_task("Batch Progress", total=len(items))
-        file_task = progress.add_task("Current File", total=100)
-
-        for item in items:
-            f = item.path
-            orig_size = item.size
-            duration = item.duration
-
-            last_speed = ["1.0x"]
-            file_start = time.perf_counter()
-
-            def _progress_cb(
-                pct: float,
-                elapsed: float,
-                speed: str,
-                _f: Path = f,
-                _dur: float = duration,
-                _ls: list[str] = last_speed,
-            ) -> None:
-                _ls[0] = speed
-                disp_curr = format_file_label(_f.name, extra_width_needed=45)
-                progress.update(
-                    file_task,
-                    completed=pct,
-                    description=(
-                        f"[bold cyan]{disp_curr}[/bold cyan] "
-                        f"[green]{pct:.1f}%[/green] "
-                        f"{fmt_duration(elapsed)}/{fmt_duration(_dur)} "
-                        f"@ [yellow]{speed}[/yellow]"
-                    ),
-                )
-
-            def _status_cb(msg: str, _f: Path = f) -> None:
-                disp_curr = format_file_label(_f.name, extra_width_needed=40)
-                progress.update(
-                    file_task,
-                    description=f"[bold cyan]{disp_curr}[/bold cyan] — {msg}",
-                )
-
-            disp_start = format_file_label(f.name, extra_width_needed=40)
-            progress.update(
-                file_task,
-                completed=0,
-                description=f"[bold cyan]{disp_start}[/bold cyan] — starting…",
-            )
-
-            result = transcode(
-                src=f,
-                library_root=root,
-                quality=quality,
-                progress_callback=_progress_cb,
-                status_callback=_status_cb,
-                delete_original=delete_original,
-                staging_dir=staging_dir,
-            )
-
-            file_elapsed = max(time.perf_counter() - file_start, 0.1)
-            progress.update(file_task, completed=100)
-
-            if result["status"] == "ok":
-                final_size = result["output_size"]
-                saved = max(orig_size - final_size, 0)
-                gain = round((saved / orig_size) * 100, 1) if orig_size else 0.0
-
-                record = TranscodeRecord(
-                    file_path=str(f),
-                    rel_path=str(item.rel_path),
-                    codec=item.codec,
-                    resolution=item.resolution,
-                    fps=item.fps,
-                    duration=duration,
-                    audio=item.audio,
-                    original_size=orig_size,
-                    final_size=final_size,
-                    gain_pct=gain,
-                    saved_bytes=saved,
-                    elapsed_seconds=file_elapsed,
-                    speed=last_speed[0],
-                    output_path=result.get("output_path"),
-                    quarantine_path=result.get("quarantine_path"),
-                    deleted_original=result.get("deleted_original", False),
-                    status="ok",
-                )
-                summary.total_files_successful += 1
-                summary.total_original_bytes += orig_size
-                summary.total_final_bytes += final_size
-                summary.total_saved_bytes += saved
-                summary.records.append(record)
-
-                history.record_transcode(
-                    file_path=str(item.path),
-                    codec=item.codec,
-                    original_size=orig_size,
-                    final_size=final_size,
-                    gain_pct=gain,
-                    status="ok",
-                    quality=quality,
-                )
-            else:
-                record = TranscodeRecord(
-                    file_path=str(f),
-                    rel_path=str(item.rel_path),
-                    codec=item.codec,
-                    resolution=item.resolution,
-                    fps=item.fps,
-                    duration=duration,
-                    audio=item.audio,
-                    original_size=orig_size,
-                    final_size=0,
-                    gain_pct=0.0,
-                    saved_bytes=0,
-                    elapsed_seconds=file_elapsed,
-                    speed="N/A",
-                    status="error",
-                    error_message=result.get("error"),
-                )
-                summary.total_files_failed += 1
-                summary.records.append(record)
-
-                history.record_transcode(
-                    file_path=str(item.path),
-                    codec=item.codec,
-                    original_size=orig_size,
-                    final_size=0,
-                    gain_pct=0.0,
-                    status="error",
-                    quality=quality,
-                )
-
-            progress.advance(batch_task)
-
-    total_batch_sec = max(time.perf_counter() - start_perf, 0.1)
-    summary.total_duration_sec = total_batch_sec
-    summary.end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    if summary.total_original_bytes > 0:
-        summary.total_gain_pct = round(
-            (summary.total_saved_bytes / summary.total_original_bytes) * 100, 1
-        )
-
-    report_path = save_report_file(summary.directory, summary)
-
-    _display_batch_summary(summary, report_path)
-
-
-def _display_batch_summary(summary: BatchSummary, report_path: Path) -> None:
-    """Print the final batch summary panel and detailed breakdown."""
-    console.print("")
-
-    action_line = (
-        "  • Original Files Action: [bold red]Permanently Deleted (Direct Deletion Mode)[/bold red]\n"
-        if summary.delete_original
-        else f"  • Quarantine Subfolder : [cyan]{summary.directory / '_originals_to_delete'}[/cyan]\n"
-    )
-
-    console.print(
-        Panel(
-            f"[bold green]Batch Transcoding Complete in {fmt_duration(summary.total_duration_sec)}![/bold green]\n\n"
-            f"  • Successful Files     : [bold green]{summary.total_files_successful}/{summary.total_files_selected}[/bold green]\n"
-            f"  • Failed Files         : [bold red]{summary.total_files_failed}[/bold red]\n"
-            f"  • Original Size        : [bold]{fmt_bytes(summary.total_original_bytes)}[/bold]\n"
-            f"  • New HEVC Size        : [bold]{fmt_bytes(summary.total_final_bytes)}[/bold]\n"
-            f"  • Disk Space Freed     : [bold green]{fmt_bytes(summary.total_saved_bytes)}[/bold green] "
-            f"([bold green]-{summary.total_gain_pct}%[/bold green])\n"
-            f"{action_line}"
-            f"  • Text Report Saved    : [bold cyan]{report_path}[/bold cyan]",
-            title="🎉  Summary & Results",
-            border_style="green",
-        )
-    )
-
-    t = Table(title="📋  Transcode Breakdown", expand=True, border_style="cyan")
-    t.add_column("File", style="cyan", no_wrap=False, overflow="fold")
-    t.add_column("Original", justify="right")
-    t.add_column("HEVC", justify="right")
-    t.add_column("Saved", justify="right", style="green")
-    t.add_column("Gain", justify="right", style="bold green")
-    t.add_column("Speed", justify="center", style="yellow")
-    t.add_column("Status", justify="center")
-
-    for r in summary.records:
-        status_badge = "[green]✅ OK[/green]" if r.status == "ok" else "[red]❌ Error[/red]"
-        t.add_row(
-            r.rel_path,
-            fmt_bytes(r.original_size),
-            fmt_bytes(r.final_size) if r.status == "ok" else "—",
-            fmt_bytes(r.saved_bytes) if r.status == "ok" else "—",
-            f"-{r.gain_pct}%" if r.status == "ok" else "—",
-            r.speed,
-            status_badge,
-        )
-
-    console.print(t)
-    if summary.delete_original:
-        console.print(
-            "\n[bold green]✓ Original H.264 video files were permanently deleted as requested.[/bold green]\n"
-        )
-    else:
-        console.print(
-            "\n[dim]Original H.264 videos are safely moved in [cyan]_originals_to_delete/[/cyan]. "
-            "Review your new HEVC files and delete the quarantine folder when satisfied.[/dim]\n"
-        )
+_prompt_interactive_folder_selection = prompt_interactive_folder_selection
+_run_main_workflow = run_main_workflow
+_execute_batch = execute_batch
+_display_estimation_table = display_estimation_table
 
 
 # ---------------------------------------------------------------------------
@@ -1017,8 +374,28 @@ def cmd_doctor(
         "--benchmark/--no-benchmark",
         help="Run a live 1-second synthetic hardware transcode benchmark.",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output diagnostic results as JSON format.",
+    ),
 ) -> None:
     """Run full system diagnostic and hardware verification."""
+    with console.status("[bold cyan]Running diagnostic checks…[/bold cyan]"):
+        results = run_all_doctor_checks(include_benchmark=benchmark)
+
+    if json_output:
+        import json
+
+        data = [
+            {"name": r.name, "passed": r.passed, "critical": r.critical, "details": r.details}
+            for r in results
+        ]
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+        if not all(r.passed for r in results if r.critical):
+            raise typer.Exit(1)
+        return
+
     console.print(
         Panel.fit(
             "[bold cyan]slim-video Doctor[/bold cyan] ── [bold white]System & Hardware Diagnostics[/bold white]\n"
@@ -1026,9 +403,6 @@ def cmd_doctor(
             border_style="cyan",
         )
     )
-
-    with console.status("[bold cyan]Running diagnostic checks…[/bold cyan]"):
-        results = run_all_doctor_checks(include_benchmark=benchmark)
 
     table = Table(title="🏥 Diagnostic Results", expand=True)
     table.add_column("Status", justify="center", width=8)
@@ -1092,9 +466,21 @@ def config_default(ctx: typer.Context) -> None:
 
 
 @config_app.command("show", help="📋 Display all current settings in a formatted table.")
-def cmd_config_show() -> None:
-    """Display current configuration in a table."""
+def cmd_config_show(
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output configuration settings as JSON format.",
+    ),
+) -> None:
+    """Display current configuration in a table or JSON."""
     cfg = config_manager.load()
+    if json_output:
+        import json
+
+        print(json.dumps(cfg.model_dump(), indent=2, ensure_ascii=False))
+        return
+
     table = Table(title="⚙️  slim-video Configuration Settings", expand=True)
     table.add_column("Setting Key", style="cyan", no_wrap=True)
     table.add_column("Value", style="bold green")
@@ -1168,66 +554,8 @@ def cmd_config_path() -> None:
 @config_app.command("wizard", help="🧙 Interactive step-by-step configuration wizard.")
 def cmd_config_wizard() -> None:
     """Guide user through updating all settings interactively."""
-    cfg = config_manager.load()
-    console.print(
-        Panel(
-            "[bold cyan]🧙 slim-video Configuration Wizard[/bold cyan]\n"
-            "[dim]Press Enter to accept current value or type a new one:[/dim]",
-            border_style="cyan",
-        )
-    )
-
     try:
-        new_gain = inquirer.text(
-            message="Minimum gain % threshold to transcode by default:",
-            default=str(cfg.min_gain_percent),
-        ).execute()
-
-        new_duration = inquirer.text(
-            message="Sample test duration in seconds (taken from middle):",
-            default=str(cfg.sample_duration_seconds),
-        ).execute()
-
-        new_quality = inquirer.text(
-            message="VideoToolbox quality factor (1=best quality, 100=smallest):",
-            default=str(cfg.quality),
-        ).execute()
-
-        new_auto_sample = inquirer.confirm(
-            message="Run automatic 20s sample tests on video candidates?",
-            default=cfg.auto_sample_test,
-        ).execute()
-
-        new_quarantine = inquirer.text(
-            message="Quarantine subfolder name for originals:",
-            default=cfg.quarantine_dir,
-        ).execute()
-
-        new_delete_original = inquirer.confirm(
-            message="Permanently delete original files after transcoding (instead of moving to quarantine)?",
-            default=cfg.delete_original,
-        ).execute()
-
-        new_ssd_staging = inquirer.confirm(
-            message="Use SSD staging directory (/tmp/slim-video) to eliminate head-thrashing on external HDDs?",
-            default=cfg.ssd_staging,
-        ).execute()
-
-        new_temp_dir = inquirer.text(
-            message="Custom temporary directory for SSD staging:",
-            default=cfg.temp_dir,
-        ).execute()
-
-        config_manager.set("min_gain_percent", new_gain)
-        config_manager.set("sample_duration_seconds", new_duration)
-        config_manager.set("quality", new_quality)
-        config_manager.set("auto_sample_test", str(new_auto_sample))
-        config_manager.set("quarantine_dir", new_quarantine)
-        config_manager.set("delete_original", str(new_delete_original))
-        config_manager.set("ssd_staging", str(new_ssd_staging))
-        config_manager.set("temp_dir", new_temp_dir)
-
-        console.print("\n[bold green]✅ All settings updated successfully![/bold green]\n")
+        run_config_wizard(config_manager)
         cmd_config_show()
     except Exception as e:
         console.print(f"\n[bold red]✗  Wizard failed: {e}[/bold red]")
@@ -1254,13 +582,41 @@ def history_default(ctx: typer.Context) -> None:
 
 
 @history_app.command("stats", help="📊 Display lifetime cumulative disk space saved.")
-def cmd_history_stats() -> None:
+def cmd_history_stats(
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output history statistics as JSON format.",
+    ),
+) -> None:
     """Show overall stats and recent entries."""
     if not history.path.exists():
+        if json_output:
+            import json
+
+            print(
+                json.dumps(
+                    {"stats": {"total_transcodes": 0, "saved_bytes": 0}, "recent_transcodes": []}
+                )
+            )
+            return
         console.print("[dim]No history recorded yet.[/dim]\n")
         return
 
     stats = history.get_stats()
+    all_data = history.get_all()
+    transcodes = all_data.get("transcodes", [])
+
+    if json_output:
+        import json
+
+        out = {
+            "stats": stats,
+            "recent_transcodes": transcodes[-10:],
+        }
+        print(json.dumps(out, indent=2, ensure_ascii=False))
+        return
+
     console.print(
         Panel(
             f"Total Transcodes Completed : [bold green]{stats['successful_transcodes']}/{stats['total_transcodes']}[/bold green]\n"
