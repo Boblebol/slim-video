@@ -7,13 +7,86 @@ import shutil
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from slim_video.estimator import DEFAULT_QUALITY, _run_with_progress
-from slim_video.probing import QUARANTINE_DIR, get_duration
-from slim_video.tree_selector import fmt_bytes
+from slim_video.constants import DEFAULT_QUALITY, DEFAULT_STAGING_DIR, QUARANTINE_DIR
+from slim_video.estimator import _run_with_progress
+from slim_video.formatting import fmt_bytes
+from slim_video.probing import get_duration
+
+__all__ = ["DEFAULT_STAGING_DIR", "build_transcode_command", "transcode"]
 
 logger = logging.getLogger("slim_video.transcoder")
 
-DEFAULT_STAGING_DIR: Path = Path("/tmp/slim-video")
+
+def build_transcode_command(
+    src: Path,
+    dst: Path,
+    quality: int = DEFAULT_QUALITY,
+    encoder: str = "hevc_videotoolbox",
+) -> list[str]:
+    """Build standardized FFmpeg transcoding command for VideoToolbox or libx265 fallback.
+
+    Args:
+        src: Source video path.
+        dst: Destination output path.
+        quality: VideoToolbox quality factor (default 50).
+        encoder: Encoder to use ('hevc_videotoolbox' or 'libx265').
+
+    Returns:
+        List of FFmpeg command-line argument strings.
+    """
+    base_cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(src),
+        "-map",
+        "0",  # Keep all video, audio, and subtitle streams
+        "-map_metadata",
+        "0",  # Preserve global & stream metadata
+        "-map_chapters",
+        "0",  # Preserve chapter marks
+    ]
+
+    if encoder == "hevc_videotoolbox":
+        video_args = [
+            "-c:v",
+            "hevc_videotoolbox",  # Hardware-accelerated HEVC on Apple Silicon
+            "-q:v",
+            str(quality),  # VideoToolbox quality factor (50 = optimal sweetspot)
+            "-tag:v",
+            "hvc1",  # QuickTime / Apple / Plex compatibility
+            "-pix_fmt",
+            "p010le",  # 10-bit color for artifact-free gradients & better compression
+            "-spatial_aq",
+            "1",  # Spatial adaptive quantization to preserve fine texture
+            "-allow_sw",
+            "0",  # Force hardware encoding
+        ]
+    else:  # libx265 CPU fallback
+        video_args = [
+            "-c:v",
+            "libx265",
+            "-crf",
+            "22",
+            "-preset",
+            "medium",
+            "-pix_fmt",
+            "yuv420p10le",
+            "-tag:v",
+            "hvc1",
+        ]
+
+    audio_sub_args = [
+        "-c:a",
+        "copy",  # Lossless copy of all audio tracks
+        "-c:s",
+        "copy",  # Lossless copy of all subtitle tracks
+        str(dst),
+        "-loglevel",
+        "error",
+    ]
+
+    return base_cmd + video_args + audio_sub_args
 
 
 def _cleanup_file(path: Path) -> None:
@@ -123,38 +196,12 @@ def transcode(
         logger.info("Transcoding '%s' -> '%s' (quality=%d)", src, temp_output, quality)
 
         # Command using VideoToolbox hardware acceleration
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            str(src),
-            "-map",
-            "0",  # Keep all video, audio, and subtitle streams
-            "-map_metadata",
-            "0",  # Preserve global & stream metadata
-            "-map_chapters",
-            "0",  # Preserve chapter marks
-            "-c:v",
-            "hevc_videotoolbox",  # Hardware-accelerated HEVC on Apple Silicon
-            "-q:v",
-            str(quality),  # VideoToolbox quality factor (50 = optimal sweetspot)
-            "-tag:v",
-            "hvc1",  # QuickTime / Apple / Plex compatibility
-            "-pix_fmt",
-            "p010le",  # 10-bit color for artifact-free gradients & better compression
-            "-spatial_aq",
-            "1",  # Spatial adaptive quantization to preserve fine texture
-            "-allow_sw",
-            "0",  # Force hardware encoding
-            "-c:a",
-            "copy",  # Lossless copy of all audio tracks
-            "-c:s",
-            "copy",  # Lossless copy of all subtitle tracks
-            str(temp_output),
-            "-loglevel",
-            "error",
-        ]
-
+        cmd = build_transcode_command(
+            src=src,
+            dst=temp_output,
+            quality=quality,
+            encoder="hevc_videotoolbox",
+        )
         result = _run_with_progress(cmd, duration=duration, callback=progress_callback)
 
         # If VideoToolbox hardware encoding failed, attempt libx265 fallback
@@ -168,36 +215,12 @@ def transcode(
                 status_callback("Hardware failed, falling back to libx265 CPU…")
 
             _cleanup_file(temp_output)
-
-            cmd_fallback = [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(src),
-                "-map",
-                "0",
-                "-map_metadata",
-                "0",
-                "-map_chapters",
-                "0",
-                "-c:v",
-                "libx265",
-                "-crf",
-                "22",
-                "-preset",
-                "medium",
-                "-pix_fmt",
-                "yuv420p10le",
-                "-tag:v",
-                "hvc1",
-                "-c:a",
-                "copy",
-                "-c:s",
-                "copy",
-                str(temp_output),
-                "-loglevel",
-                "error",
-            ]
+            cmd_fallback = build_transcode_command(
+                src=src,
+                dst=temp_output,
+                quality=quality,
+                encoder="libx265",
+            )
             result = _run_with_progress(cmd_fallback, duration=duration, callback=progress_callback)
 
         # Check if encoding produced a valid non-empty file

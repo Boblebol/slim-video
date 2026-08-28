@@ -7,10 +7,10 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from slim_video.constants import DEFAULT_QUALITY, SAMPLE_SECONDS
 from slim_video.probing import _run, get_audio_bitrate, get_duration
 
-SAMPLE_SECONDS: int = 20
-DEFAULT_QUALITY: int = 50
+__all__ = ["DEFAULT_QUALITY", "SAMPLE_SECONDS", "_run_with_progress", "estimate_savings"]
 
 
 def _run_with_progress(
@@ -34,24 +34,36 @@ def _run_with_progress(
     speed = "1.0x"
     elapsed = 0.0
 
-    if proc.stdout:
-        for line in proc.stdout:
-            line = line.strip()
-            if line.startswith("out_time_us="):
-                try:
-                    elapsed = float(line.split("=")[1]) / 1_000_000
-                    pct = min(100.0, max(0.0, (elapsed / duration) * 100))
-                    callback(pct, elapsed, speed)
-                except (ValueError, ZeroDivisionError):
-                    pass
-            elif line.startswith("speed="):
-                raw = line.split("=")[1].strip()
-                if raw and raw != "N/A":
-                    speed = raw
+    try:
+        if proc.stdout:
+            for line in proc.stdout:
+                line = line.strip()
+                if line.startswith("out_time_us="):
+                    try:
+                        elapsed = float(line.split("=")[1]) / 1_000_000
+                        pct = min(100.0, max(0.0, (elapsed / duration) * 100))
+                        callback(pct, elapsed, speed)
+                    except (ValueError, ZeroDivisionError):
+                        pass
+                elif line.startswith("speed="):
+                    raw = line.split("=")[1].strip()
+                    if raw and raw != "N/A":
+                        speed = raw
 
-    proc.wait()
-    stderr = proc.stderr.read() if proc.stderr else ""
-    return subprocess.CompletedProcess(progress_cmd, proc.returncode, "", stderr)
+        proc.wait()
+        stderr = proc.stderr.read() if proc.stderr else ""
+        return subprocess.CompletedProcess(progress_cmd, proc.returncode, "", stderr)
+    except BaseException:
+        try:
+            proc.terminate()
+            proc.wait(timeout=2.0)
+        except Exception:
+            try:
+                proc.kill()
+                proc.wait()
+            except Exception:
+                pass
+        raise
 
 
 def estimate_savings(

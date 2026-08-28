@@ -7,9 +7,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-DEFAULT_HISTORY_FILE: Path = Path.home() / ".slim_video_history.json"
+from slim_video.constants import DEFAULT_HISTORY_FILE
 
 _EMPTY_STORE: dict[str, list[dict[str, Any]]] = {"tests": [], "transcodes": []}
+
+
+MAX_HISTORY_TESTS: int = 500
+MAX_HISTORY_TRANSCODES: int = 2000
 
 
 class HistoryManager:
@@ -86,6 +90,8 @@ class HistoryManager:
                 "quality": quality,
             }
         )
+        if len(data["tests"]) > MAX_HISTORY_TESTS:
+            data["tests"] = data["tests"][-MAX_HISTORY_TESTS:]
         self._write(data)
 
     def record_transcode(
@@ -114,6 +120,8 @@ class HistoryManager:
                 "status": status,
             }
         )
+        if len(data["transcodes"]) > MAX_HISTORY_TRANSCODES:
+            data["transcodes"] = data["transcodes"][-MAX_HISTORY_TRANSCODES:]
         self._write(data)
 
     # ------------------------------------------------------------------
