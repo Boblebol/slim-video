@@ -1,0 +1,27 @@
+name: 🛡️ Branch Guard & Security Gate
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  verify-author-and-approvals:
+    name: 🔒 Verify Actor & Security Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Authorized Actor
+        env:
+          ACTOR: ${{ github.actor }}
+          ALLOWED_OWNER: "Boblebol"
+        run: |
+          echo "Checking permissions for actor: ${ACTOR}..."
+          if [ "${ACTOR}" != "${ALLOWED_OWNER}" ] && [ "${{ github.event_name }}" = "push" ]; then
+            echo "❌ Error: Direct pushes to main branch are strictly restricted to @${ALLOWED_OWNER}."
+            exit 1
+          fi
+          echo "✅ Actor authorization verified successfully."
