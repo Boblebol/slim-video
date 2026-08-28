@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-08-28
+
+### Added
+- GitHub branch protection and security gate workflow in `.github/workflows/branch-guard.yml` restricting direct `main` branch pushes strictly to `@Boblebol`.
+- Contributor Covenant Code of Conduct v2.1 in `CODE_OF_CONDUCT.md`.
+- Explicit repository code ownership assignment to `@Boblebol` in `.github/CODEOWNERS`.
+- Structured GitHub Pull Request template with Mermaid architecture diagrams in `.github/PULL_REQUEST_TEMPLATE.md`.
+- Standard GitHub Issue templates for bug reports, feature requests, and community links in `.github/ISSUE_TEMPLATE/`.
+- Local modular agent skills store provisioned into `.agents/skills/`.
+
 ## [1.5.1] - 2026-08-28
 
 ### Added
@@ -106,7 +116,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic terminal file selector.
 - Cumulative history tracking in `~/.slim_video_history.json`.
 
-[Unreleased]: https://github.com/Boblebol/slim-video/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/Boblebol/slim-video/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/Boblebol/slim-video/compare/v1.5.1...v1.5.2
+[1.5.1]: https://github.com/Boblebol/slim-video/compare/v1.5.0...v1.5.1
+[1.5.0]: https://github.com/Boblebol/slim-video/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/Boblebol/slim-video/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Boblebol/slim-video/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Boblebol/slim-video/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Boblebol/slim-video/compare/v1.0.0...v1.1.0

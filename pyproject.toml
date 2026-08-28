@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "slim-video"
-version = "1.5.1"
+version = "1.5.2"
 description = "Smart, hardware-accelerated H.264 to HEVC/x265 batch transcoder for Apple Silicon with sample estimation & collapsible TUI."
 readme = "README.md"
 license = "MIT"
