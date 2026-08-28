@@ -11,26 +11,17 @@ import locale
 import sys
 from pathlib import Path
 
+from slim_video.formatting import fit_terminal_text, fmt_bytes, fmt_duration
 from slim_video.models import FileItem, TreeNode
 
-
-def fmt_bytes(size: float) -> str:
-    """Format bytes into human-readable string (KB, MB, GB)."""
-    if size < 1_048_576:
-        return f"{size / 1024:.1f} KB"
-    if size < 1_073_741_824:
-        return f"{size / 1_048_576:.1f} MB"
-    return f"{size / 1_073_741_824:.2f} GB"
-
-
-def fmt_duration(seconds: float) -> str:
-    """Format seconds into HH:MM:SS or MM:SS."""
-    if not seconds or seconds <= 0:
-        return "N/A"
-    s = int(seconds)
-    h, m = divmod(s, 3600)
-    m, s = divmod(m, 60)
-    return f"{h}h {m:02d}m {s:02d}s" if h else f"{m}m {s:02d}s"
+__all__ = [
+    "build_file_tree",
+    "fit_terminal_text",
+    "fmt_bytes",
+    "fmt_duration",
+    "get_visible_rows",
+    "select_files_interactive",
+]
 
 
 def build_file_tree(root: Path, file_items: list[FileItem]) -> TreeNode:
@@ -99,15 +90,6 @@ def get_visible_rows(node: TreeNode, depth: int = 0) -> list[tuple[TreeNode, int
         for child in node.children:
             rows.extend(get_visible_rows(child, depth + 1))
     return rows
-
-
-def fit_terminal_text(text: str, max_width: int) -> str:
-    """Format text to fit within max_width using middle ellipsis if needed."""
-    if len(text) <= max_width or max_width < 4:
-        return text[:max_width]
-    part = (max_width - 1) // 2
-    rem = max_width - 1 - part
-    return f"{text[:part]}…{text[-rem:]}" if rem > 0 else f"{text[: max_width - 1]}…"
 
 
 def _safe_addstr(stdscr: curses.window, y: int, x: int, text: str, attr: int = 0) -> None:
@@ -345,7 +327,7 @@ def _interactive_tree_loop(
         _safe_addstr(stdscr, max_y - 2, 0, "─" * (max_x - 1), curses.color_pair(2))
         _safe_addstr(stdscr, max_y - 2, 2, f" {footer_top} ", curses.color_pair(3) | curses.A_BOLD)
 
-        help_bar = " [↑/↓] Move  [Space] Select  [←/→] Fold/Unfold  [a] Toggle All  [e/c] Expand/Collapse  [Enter] Start  [q] Quit "
+        help_bar = " [↑/↓/j/k] Move  [Space] Select  [←/→/h/l] Fold/Unfold  [a] All  [e/c] Expand/Collapse  [Enter] Start  [q] Quit "
         _safe_addstr(
             stdscr, max_y - 1, 0, help_bar.ljust(max_x - 1), curses.color_pair(5) | curses.A_BOLD
         )

@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from slim_video.formatting import fmt_bytes, fmt_duration
 from slim_video.models import BatchSummary
-from slim_video.tree_selector import fmt_bytes, fmt_duration
 
 
 def format_report(summary: BatchSummary) -> str:

@@ -68,3 +68,4 @@ transcode_report*.txt
 .hevc_cli_history.json
 *.hevc.mkv
 .tmp_*.hevc.mkv
+coverage.xml

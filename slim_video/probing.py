@@ -6,19 +6,31 @@ import subprocess
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-#: Video container extensions scanned recursively.
-SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
-    {"mp4", "mkv", "avi", "mov", "m4v", "wmv", "flv", "ts", "webm"}
+from slim_video.constants import (
+    H264_CODECS,
+    HEVC_CODECS,
+    QUARANTINE_DIR,
+    SUPPORTED_EXTENSIONS,
 )
 
-#: Codec identifiers that represent H.264 / AVC.
-H264_CODECS: frozenset[str] = frozenset({"h264", "avc", "avc1", "x264"})
-
-#: Codec identifiers that represent HEVC / H.265.
-HEVC_CODECS: frozenset[str] = frozenset({"hevc", "h265", "hvc1", "x265"})
-
-#: Quarantine folder name for original files after successful transcoding.
-QUARANTINE_DIR: str = "_originals_to_delete"
+__all__ = [
+    "H264_CODECS",
+    "HEVC_CODECS",
+    "QUARANTINE_DIR",
+    "SUPPORTED_EXTENSIONS",
+    "_run",
+    "find_h264_candidates",
+    "find_video_files",
+    "get_audio_bitrate",
+    "get_audio_summary",
+    "get_duration",
+    "get_fps",
+    "get_resolution",
+    "get_video_codec",
+    "get_video_metadata",
+    "is_h264_codec",
+    "is_hevc_codec",
+]
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:

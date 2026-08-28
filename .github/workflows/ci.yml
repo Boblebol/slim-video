@@ -75,5 +75,12 @@ jobs:
         run: uv sync --all-extras --dev
       - name: Run Doctor Hardware Diagnostics
         run: uv run slim-video doctor
-      - name: Run Pytest Suite
+      - name: Run Pytest Suite with Coverage
         run: uv run pytest tests/ -v --tb=short
+      - name: Upload Coverage Artifact (Python 3.12)
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore

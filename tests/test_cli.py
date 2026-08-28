@@ -177,3 +177,30 @@ def test_cli_config_ssd_staging_and_temp_dir() -> None:
     result_get2 = runner.invoke(app, ["config", "get", "temp_dir"])
     assert result_get2.exit_code == 0
     assert "/tmp/custom-slim" in result_get2.output
+
+
+@patch("slim_video.cli.check_dependencies")
+@patch("slim_video.cli.find_h264_candidates")
+def test_cli_json_flags(mock_find: MagicMock, mock_deps: MagicMock, tmp_path: Path) -> None:
+    mock_deps.return_value = []
+    mock_find.return_value = ([], [])
+
+    # estimate --json
+    res_est = runner.invoke(app, ["estimate", str(tmp_path), "--json"])
+    assert res_est.exit_code == 0
+    assert '"directory"' in res_est.output
+
+    # config show --json
+    res_cfg = runner.invoke(app, ["config", "show", "--json"])
+    assert res_cfg.exit_code == 0
+    assert '"min_gain_percent"' in res_cfg.output
+
+    # doctor --json
+    res_doc = runner.invoke(app, ["doctor", "--no-benchmark", "--json"])
+    assert res_doc.exit_code == 0
+    assert '"name"' in res_doc.output
+
+    # history stats --json
+    res_hist = runner.invoke(app, ["history", "stats", "--json"])
+    assert res_hist.exit_code == 0
+    assert '"stats"' in res_hist.output
