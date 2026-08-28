@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import shutil
 
-from slim_video.estimator import DEFAULT_QUALITY, SAMPLE_SECONDS, estimate_savings
-from slim_video.probing import (
+from slim_video.constants import (
+    DEFAULT_QUALITY,
+    DEFAULT_STAGING_DIR,
     H264_CODECS,
     HEVC_CODECS,
     QUARANTINE_DIR,
+    SAMPLE_SECONDS,
     SUPPORTED_EXTENSIONS,
+)
+from slim_video.estimator import estimate_savings
+from slim_video.formatting import fit_terminal_text, fmt_bytes, fmt_duration
+from slim_video.probing import (
     find_h264_candidates,
     find_video_files,
     get_audio_bitrate,
@@ -22,7 +28,7 @@ from slim_video.probing import (
     is_h264_codec,
     is_hevc_codec,
 )
-from slim_video.transcoder import DEFAULT_STAGING_DIR, transcode
+from slim_video.transcoder import transcode
 
 
 def check_dependencies() -> list[str]:
@@ -42,6 +48,9 @@ __all__ = [
     "estimate_savings",
     "find_h264_candidates",
     "find_video_files",
+    "fit_terminal_text",
+    "fmt_bytes",
+    "fmt_duration",
     "get_audio_bitrate",
     "get_audio_summary",
     "get_duration",

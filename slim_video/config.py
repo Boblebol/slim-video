@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-DEFAULT_CONFIG_PATH: Path = Path.home() / ".slim_video_config.json"
+from slim_video.constants import DEFAULT_CONFIG_PATH
 
 
 class AppConfig(BaseModel):
